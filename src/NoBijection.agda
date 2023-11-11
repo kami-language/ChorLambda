@@ -1,9 +1,11 @@
-open import Data.Fin using (Fin)
-open import Agda.Builtin.Nat using (Nat; _+_; _-_)
+open import Data.Fin using (Fin; #_)
+open import Data.Fin.Permutation using (Permutation′; _⟨$⟩ʳ_; transpose ; id; insert)
+open import Agda.Builtin.Nat using (Nat; _+_; _-_; zero; suc)
 open import Data.Nat using (_≤_)
 open import Data.List using (List; []; _++_; map; foldr; _∷_; [_])
 open import Data.List.Membership.Propositional using (_∈_)
-open import Data.Product
+open import Data.Product using (_×_)
+open import Data.Vec using (Vec)
 open import Data.String using (String)
 open import Agda.Builtin.Equality using (_≡_)
 
@@ -32,10 +34,10 @@ Role = Fin
 
 -- a type is parametrized by the maximal number of different roles it uses
 data Type : Roles -> Set where
- ⟶ : ∀{v w} -> (u : Roles) → Type v → Type w → Type (u + v + w) -- abstraction type: R may also participate in addition to roles T and roles T'
- _＋_ : ∀{U V} -> Type U → Type V → Type (U + V) -- sum type
- _mul_ : ∀{U V} -> Type U → Type V → Type (U + V) -- product type
- _＠_ : TVar → (U : Roles) → Type U -- typevar at location TODO: really a set and not a list?
+ ⟶ : ∀{U} → List (Role U) → Type U → Type U → Type U -- abstraction type: R may also participate in addition to roles T and roles T'
+ _＋_ : ∀{U} -> Type U → Type U → Type U -- sum type
+ _mul_ : ∀{U} → Type U → Type U → Type U -- product type
+ _＠_ : ∀{U} → TVar → (R : List (Role U)) → Type U -- typevar at location TODO: really a set and not a list?
  o＠ : ∀{r} → (Fin r) → Type r -- unit type at role r
 
 
@@ -76,7 +78,7 @@ RCtx = Roles
 
 data TypingStmt : Set where
   _⦂_ : ∀{Θ} → Var → Type Θ → TypingStmt
-  _＠_⦂_ : ∀{N} → Name → (n : Fin N) → TypingStmt -- may also not be set
+  _＠⦂_ : ∀{Θ} Name → Type Θ → TypingStmt -- may also not be set
 
 TCtx : Set
 TCtx = List TypingStmt
@@ -86,7 +88,20 @@ data TDef : Set where
 --  _＠_＝_ : TVar → (R : 𝒮 Role) → (T : Type) → (R ≐ (roles T)) → TDef
 
 TRCtx : Set
-TRCtx = List TDef -- really set? distinct yes but what about order
+TRCtx = List TDef 
+
+
+_⟦_⟧ : {Θ : Roles} → Type Θ → (Permutation′ Θ) → Type Θ
+⟶ Θ x x₁ ⟦ rename ⟧ = ⟶ Θ (x ⟦ rename ⟧) (x₁ ⟦ rename ⟧)
+(x ＋ x₁) ⟦ rename ⟧ = (x ⟦ rename ⟧) ＋ (x₁ ⟦ rename ⟧)
+(x mul x₁) ⟦ rename ⟧ = (x ⟦ rename ⟧) mul (x₁ ⟦ rename ⟧)
+(x ＠ Θ) ⟦ rename ⟧ = x ＠ (map (λ y → rename ⟨$⟩ʳ y) Θ)
+o＠ x ⟦ rename ⟧ = o＠ (rename ⟨$⟩ʳ x)
+
+data singleRole : {Θ : Roles} → Type Θ → Set where
+
+getSingle : ∀{Θ} → (T : Type Θ) → singleRole T → Role Θ
+getSingle = {!!}
 
 ----------------------------------------------------
 -- typing rules
@@ -97,28 +112,26 @@ data _⨾_⊢_⦂_ {Θ} (Σ : TRCtx) (Γ : TCtx) : Choreography → Type Θ -> S
        ----------------------------
       → (Σ ⨾ Γ ⊢ V (var x) ⦂ T)
 
- tapp : ∀ {N M : Choreography} {T T'} {R : Roles}
-      → (Σ ⨾ Γ ⊢ N ⦂ (⟶ R T T')) → (Σ ⨾ Γ ⊢ M ⦂ T)
+ tapp : ∀ {N M : Choreography} {T T'} {ρ : List (Role Θ)}
+      → (Σ ⨾ Γ ⊢ N ⦂ (⟶ ρ T T')) → (Σ ⨾ Γ ⊢ M ⦂ T)
        ---------------------------
       → (Σ ⨾ Γ ⊢ (N ∙ M) ⦂ T')
 
-{-}
- tdef :  {n : ℕ} {R : Roles} {T : Type R} {f : Name}
-      → ((f ＠ n ⦂ T) ∈ Γ) -- → (p : (roles T) ⊆ Rʻ) → R ⊆ Θ -- → (r : (Rename Rʻ R))
+ tdef :  {Θʻ : Roles} {T : Type Θ} {f : Name}
+      → ((f ＠⦂ T) ∈ Γ) → (rename : Permutation′ Θ)
        --------------------------------------
-      → (Σ ⨾ Γ ⊢ (f ⦅ R ⦆) ⦂ T)
--}
+      → (Σ ⨾ Γ ⊢ (f ⦅ Θ ⦆) ⦂ (T ⟦ rename ⟧))
 
- tabs : {R Rʻ ρ : Roles} {M : Choreography} {T : Type R} {Tʻ : Type Rʻ} {x : Var}
-      → (Σ ⨾ (x ⦂ T) ∷ Γ ⊢ M ⦂ Tʻ)
+ tabs : {M : Choreography} {T Tʻ : Type Θ} {x : Var}
+      → (Σ ⨾ (x ⦂ T) ∷ Γ ⊢ M ⦂ Tʻ) → (ρ : List (Role Θ))
        -------------------------------------
       → (Σ ⨾ Γ ⊢ V (Λ x T M) ⦂ ⟶ ρ T Tʻ)
-{-}
- tcom : {T : Type} {r s : Role}
-      → (p : (roles T) ≐  ⦃- s -⦄) → (⦃- s -⦄ ∪ ⦃- r -⦄) ⊆ Θ
-      -----------------------------------------------------------------------
-      → (Θ ⨾ Σ ⨾ Γ ⊢ V (com s r) ⦂ ⟶ ⦃⦄ T (T ⟦ singleRename s r , proj₁ p ⟧))
 
+ tcom : {T : Type Θ} {r s : Role Θ}
+      → (p : singleRole T)
+      -----------------------------------------------------------------------
+      → (Σ ⨾ Γ ⊢ (V (com {!!} (getSingle T p) s)) ⦂ ⟶ [] T (T ⟦ transpose (getSingle T p) s ⟧))
+{-}
  tsel : {M : Choreography} {T : Type} {r s : Role} {l : Label}
       →  (Θ ⨾ Σ ⨾ Γ ⊢ M ⦂ T ) → (⦃- s -⦄ ∪ ⦃- r -⦄) ⊆ Θ
       -------------------------------------
