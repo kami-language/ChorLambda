@@ -1,22 +1,19 @@
-open import Data.Fin using (Fin; #_)
+open import Data.Fin using (Fin; #_; zero; suc)
+open import Data.Fin.Properties using (_≟_)
 open import Data.Fin.Permutation using (Permutation′; _⟨$⟩ʳ_; transpose ; id; insert)
 open import Agda.Builtin.Nat using (Nat; _+_; _-_; zero; suc)
 open import Data.Nat using (_≤_)
 open import Data.List using (List; []; _++_; map; foldr; _∷_; [_])
 open import Data.List.Membership.Propositional using (_∈_)
-open import Data.Product using (_×_)
-open import Data.Vec using (Vec)
+open import Data.Product using (Σ; _×_; _,_)
+open import Data.Vec using (Vec; []; _∷_; lookup) renaming ([_] to ⟨_⟩)
 open import Data.String using (String)
-open import Agda.Builtin.Equality using (_≡_)
+open import Relation.Nullary.Negation using (¬_)
+open import Relation.Binary.PropositionalEquality using (_≡_; cong; sym)
+open import Relation.Nullary.Negation using () renaming (contradiction to _↯_)
 
 Var : Set
 Var = String
-
-TVar : Set
-TVar = String
-
-Name : Set
-Name = String
 
 Label : Set
 Label = String
@@ -37,108 +34,148 @@ data Type : Roles -> Set where
  ⟶ : ∀{U} → List (Role U) → Type U → Type U → Type U -- abstraction type: R may also participate in addition to roles T and roles T'
  _＋_ : ∀{U} -> Type U → Type U → Type U -- sum type
  _mul_ : ∀{U} → Type U → Type U → Type U -- product type
- _＠_ : ∀{U} → TVar → (R : List (Role U)) → Type U -- typevar at location TODO: really a set and not a list?
  o＠ : ∀{r} → (Fin r) → Type r -- unit type at role r
 
-
-{-}
-data Type : Set where
- ⟶ : 𝒮 Role → Type → Type → Type -- abstraction type: R may also participate in addition to roles T and roles T'
- _＋_ : Type → Type → Type -- sum type
- _mul_ : Type → Type → Type -- product type
- _＠_ : TVar → 𝒮 Role → Type -- typevar at location TODO: really a set and not a list?
- o＠ : Role → Type -- unit type at role R
--}
+-- map over the roles of a type
+mapRoles : {R Θ : Roles} → Type R → (Fin R → Fin Θ) → Type Θ
+mapRoles (⟶ x T T₁) f = ⟶ (map f x) (mapRoles T f) (mapRoles T₁ f)
+mapRoles (T ＋ T₁) f = (mapRoles T f) ＋ mapRoles T₁ f
+mapRoles (T mul T₁) f = (mapRoles T f) mul (mapRoles T₁ f)
+mapRoles (o＠ r) f = o＠ (f r)
 
 data Choreography : Set
 
 data Value : Set where
  var : Var -> Value
- Λ : Var -> {R : Roles} → Type R -> Choreography -> Value -- lambda abstraction
+ Λ : ∀{r} → Var -> Type r -> Choreography -> Value -- lambda abstraction
  Inl : Value → Value -- sum ctor
  Inr : Value → Value -- sum ctor
  fst : Value -- pair destructor
  snd : Value  -- pair destructor
  Pair : Value → Value → Value
- O＠ : ∀{r} Role r → Value -- unit value at role R
- com : ∀{r s} Role r → Role s → Value -- communicate: take value at role R and return it at role S
+ O＠ : ∀{r} → Role r → Value -- unit value at role R
+ com : ∀{r s} → Role r → Role s → Value -- communicate: take value at role R and return it at role S
 
 data Choreography where
  V : Value -> Choreography
- _⦅_⦆ : Name -> Roles -> Choreography -- evaluate to choreo f instantiated with roles R
+--  _⦅_⦆ : ∀{Θ} → Name -> List (Role Θ) -> Choreography -- evaluate to choreo f instantiated with roles R
  _∙_ : Choreography -> Choreography -> Choreography -- application
  case : Choreography -> (Var × Choreography) -> (Var × Choreography) -> Choreography -- sum destructor
- select : ∀{r s} Role r -> Role s -> Label -> Choreography -> Choreography -- S informs R it has selected l then continues with M
+ select : ∀{r s} → Role r -> Role s -> Label -> Choreography -> Choreography -- S informs R it has selected l then continues with M
+
+
+----------------------------------------------------
+-- role renaming
+
+record Injection (M N : Nat) : Set where
+  field
+    inj : Fin M → Fin N
+    distinct : ∀{n₁ n₂ : Fin M} → ((inj n₁) ≡ (inj n₂)) → (n₁ ≡ n₂)
+
+open Injection
+
+data _∉_ {R} : ∀{N} → R → Vec R N → Set where
+  empty : ∀{a} → a ∉ []
+  pop : ∀{a b N} {V : Vec R N} → ¬ (a ≡ b) → a ∉ V → a ∉ (b ∷ V)
+
+data unique {R} : ∀{N} → Vec R N → Set where
+  empty : unique []
+  rest : ∀{a N} {V : Vec R N} → unique V → a ∉ V → unique (a ∷ V)
+
+nope : ∀{R N a n} {V : Vec R N} → unique V → a ∉ V → ¬ (a ≡ lookup V n)
+nope {n = zero} uniqueV (pop p q) w =  p w
+nope {n = suc n} (rest uV _) (pop p q) w = nope uV q w
+
+unique_distinct : ∀{R N n m} {v : Vec R N} → unique v → ((lookup v n) ≡ (lookup v m)) → (n ≡ m)
+unique_distinct {n = zero} {zero} (rest un x) lookup_eq = _≡_.refl
+unique_distinct {n = zero} {suc m} (rest un x) lookup_eq = lookup_eq ↯ (nope un x)
+unique_distinct {n = suc n} {zero} (rest un x) lookup_eq = sym lookup_eq  ↯ (nope un x)
+unique_distinct {n = suc n} {suc m} (rest un x) lookup_eq = cong suc (unique_distinct un lookup_eq)
+
+-- make an injection from a vector with unique elements
+fromVec : ∀{M N} → (V : Vec (Fin N) M) → unique V → Injection M N
+fromVec v un = record { inj = λ n → lookup v n ;
+                        distinct =  unique_distinct un }
+
+-- role renaming
+_⟦_⟧ : {R Θ : Roles} → Type R → (Injection R Θ) → Type Θ
+_⟦_⟧ T rename = mapRoles T (inj rename)
+
+-- embed a single role type by giving its role the given name
+embed : ∀{Θ} → Type 1 → Role Θ → Type Θ
+embed = λ T n → T ⟦ (fromVec ⟨ n ⟩ (rest empty empty)) ⟧
+
 
 ----------------------------------------------------
 -- contexts
 
-RCtx : Set
-RCtx = Roles
+data TypingStmt : Roles → Set where
+  _⦂_ : ∀{Θ} → Var → Type Θ → TypingStmt Θ
 
-data TypingStmt : Set where
-  _⦂_ : ∀{Θ} → Var → Type Θ → TypingStmt
-  _＠⦂_ : ∀{Θ} Name → Type Θ → TypingStmt -- may also not be set
+TCtx : Roles → Set
+TCtx Θ = List (TypingStmt Θ)
 
-TCtx : Set
-TCtx = List TypingStmt
-
-data TDef : Set where
-  _＠_＝_ : TVar → (R : Roles) → (T : Type R) → TDef
---  _＠_＝_ : TVar → (R : 𝒮 Role) → (T : Type) → (R ≐ (roles T)) → TDef
-
-TRCtx : Set
-TRCtx = List TDef 
-
-
-_⟦_⟧ : {Θ : Roles} → Type Θ → (Permutation′ Θ) → Type Θ
-⟶ Θ x x₁ ⟦ rename ⟧ = ⟶ Θ (x ⟦ rename ⟧) (x₁ ⟦ rename ⟧)
-(x ＋ x₁) ⟦ rename ⟧ = (x ⟦ rename ⟧) ＋ (x₁ ⟦ rename ⟧)
-(x mul x₁) ⟦ rename ⟧ = (x ⟦ rename ⟧) mul (x₁ ⟦ rename ⟧)
-(x ＠ Θ) ⟦ rename ⟧ = x ＠ (map (λ y → rename ⟨$⟩ʳ y) Θ)
-o＠ x ⟦ rename ⟧ = o＠ (rename ⟨$⟩ʳ x)
-
-data singleRole : {Θ : Roles} → Type Θ → Set where
-
-getSingle : ∀{Θ} → (T : Type Θ) → singleRole T → Role Θ
-getSingle = {!!}
 
 ----------------------------------------------------
 -- typing rules
+-- we only have the Γ context from the paper.
+-- role context Θ moved into the dependent type
+-- type definitions context Σ is omitted for now, we use builtins instead
 
-data _⨾_⊢_⦂_ {Θ} (Σ : TRCtx) (Γ : TCtx) : Choreography → Type Θ -> Set where
- tvar : {x : Var} {T : Type Θ}
-      → ((x ⦂ T) ∈ Γ)
-       ----------------------------
-      → (Σ ⨾ Γ ⊢ V (var x) ⦂ T)
-
- tapp : ∀ {N M : Choreography} {T T'} {ρ : List (Role Θ)}
-      → (Σ ⨾ Γ ⊢ N ⦂ (⟶ ρ T T')) → (Σ ⨾ Γ ⊢ M ⦂ T)
-       ---------------------------
-      → (Σ ⨾ Γ ⊢ (N ∙ M) ⦂ T')
-
- tdef :  {Θʻ : Roles} {T : Type Θ} {f : Name}
-      → ((f ＠⦂ T) ∈ Γ) → (rename : Permutation′ Θ)
-       --------------------------------------
-      → (Σ ⨾ Γ ⊢ (f ⦅ Θ ⦆) ⦂ (T ⟦ rename ⟧))
+data _⊢_⦂_ {Θ} (Γ : TCtx Θ) : Choreography → Type Θ -> Set where
 
  tabs : {M : Choreography} {T Tʻ : Type Θ} {x : Var}
-      → (Σ ⨾ (x ⦂ T) ∷ Γ ⊢ M ⦂ Tʻ) → (ρ : List (Role Θ))
+      → (((x ⦂ T) ∷ Γ) ⊢ M ⦂ Tʻ) → (ρ : List (Role Θ))
+       -------------------------------
+      → (Γ ⊢ V (Λ x T M) ⦂ ⟶ ρ T Tʻ)
+
+ tvar : {x : Var} {T : Type Θ}
+      → ((x ⦂ T) ∈ Γ)
+       --------------------
+      → (Γ ⊢ V (var x) ⦂ T)
+
+ tapp : ∀ {N M : Choreography} {T T'} {ρ : List (Role Θ)}
+      → (Γ ⊢ N ⦂ (⟶ ρ T T')) → (Γ ⊢ M ⦂ T)
+       -------------------
+      → (Γ ⊢ (N ∙ M) ⦂ T')
+
+ tcase : ∀ {x x′ : Var} {C M′ M′′ : Choreography} {T₁ T₂ T : Type Θ}
+       → (Γ ⊢ C ⦂ (T₁ ＋ T₂)) → (((x ⦂ T₁) ∷ Γ) ⊢ M′ ⦂ T) → (((x ⦂ T₂) ∷ Γ) ⊢ M′′ ⦂ T)
+       --------------------------------------
+       → (Γ ⊢ case C (x , M′) (x′ , M′′) ⦂ T)
+
+ tsel : {M : Choreography} {T : Type Θ} {r s : Role Θ} {l : Label}
+      →  (Γ ⊢ M ⦂ T )
+      --------------------------
+      → (Γ ⊢ select s r l M ⦂ T)
+
+ tunit : ∀ {r : Role Θ}
+      -------------------------
+      → (Γ ⊢ V (O＠ r) ⦂ o＠ r)
+
+ tcom : {T : Type 1} {r s : Role Θ}
+      -----------------------------------------------------
+      → (Γ ⊢ (V (com r s)) ⦂ ⟶ [] (embed T r) (embed T s))
+
+ tpair : ∀ {M M′ : Value} {T T′ : Type Θ}
+       → (Γ ⊢ (V M) ⦂ T ) → (Γ ⊢ (V M′) ⦂ T′ )
        -------------------------------------
-      → (Σ ⨾ Γ ⊢ V (Λ x T M) ⦂ ⟶ ρ T Tʻ)
+       → (Γ ⊢ (V (Pair M M′)) ⦂ (T mul T′))
 
- tcom : {T : Type Θ} {r s : Role Θ}
-      → (p : singleRole T)
-      -----------------------------------------------------------------------
-      → (Σ ⨾ Γ ⊢ (V (com {!!} (getSingle T p) s)) ⦂ ⟶ [] T (T ⟦ transpose (getSingle T p) s ⟧))
-{-}
- tsel : {M : Choreography} {T : Type} {r s : Role} {l : Label}
-      →  (Θ ⨾ Σ ⨾ Γ ⊢ M ⦂ T ) → (⦃- s -⦄ ∪ ⦃- r -⦄) ⊆ Θ
-      -------------------------------------
-      → (Θ ⨾ Σ ⨾ Γ ⊢ select s r l M ⦂ T)
+ tproj1 : ∀ {T T′ : Type Θ}
+      ----------------------------------------
+        → (Γ ⊢ (V fst) ⦂ (⟶ [] (T mul T′) T))
 
- teq : {M : Choreography} {T : Type} {R Rʻ : 𝒮 Role} {t : TVar} {p : R ≐ (roles T)}
-      →  (Θ ⨾ Σ ⨾ Γ ⊢ M ⦂ (t ＠ Rʻ)) → ((t ＠ R ＝ T) p ∈ Σ) → Rʻ ⊆ Θ → (rename : Rename R Rʻ)
-      -------------------------------------
-      → (Θ ⨾ Σ ⨾ Γ ⊢ M ⦂ (T ⟦ rename , proj₂ p ⟧))
--}
+ tproj2 : ∀ {T T′ : Type Θ}
+      ------------------------------------------
+        → (Γ ⊢ (V snd) ⦂ (⟶ [] (T mul T′) T′))
+
+ tinl : ∀ {v : Value} {T T′ : Type Θ}
+      → (Γ ⊢ (V v) ⦂ T)
+      -------------------------------
+      → (Γ ⊢ (V (Inl v)) ⦂ (T ＋ T′))
+
+ tinr : ∀ {v : Value} {T T′ : Type Θ}
+      → (Γ ⊢ (V v) ⦂ T′)
+      -------------------------------
+      → (Γ ⊢ (V (Inr v)) ⦂ (T ＋ T′))
