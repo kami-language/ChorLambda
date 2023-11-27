@@ -2,13 +2,15 @@ module Utils where
 
 open import Relation.Nullary.Decidable using (Dec; yes; no; _because_; _×-dec_; _⊎-dec_ )
 open import Data.List using (List; []; _++_; map; foldr; _∷_; [_]; filter)
-open import Data.List.Membership.Propositional using (_∈_)
+open import Data.List.Membership.Propositional using (_∈_; _∉_)
 open import Relation.Binary.PropositionalEquality using (_≡_; cong; sym)
 open import Data.String using (String)
 open import Data.String.Properties using () renaming (_≟_ to _≟-str_)
 open import Data.Fin using (Fin; #_; zero; suc)
 open import Data.Fin.Properties using (_≟_)
-open import Data.List.Relation.Unary.Any using (here; there)
+open import Data.List.Relation.Unary.Any using (Any; here; there)
+open import Relation.Nullary.Negation using () renaming (contradiction to _↯_)
+
 
 ----------------------------------------------------
 -- list stuff
@@ -17,7 +19,7 @@ record DecEquable (A : Set) : Set where
   field
     _==_ : ∀ (x y : A) → Dec (x ≡ y)
 
-open DecEquable {{...}}
+open DecEquable {{...}} public
 
 instance
   decequable-string : DecEquable String
@@ -25,6 +27,16 @@ instance
 
   decequable-role : ∀ {Θ} → DecEquable (Fin Θ)
   decequable-role = record { _==_ = _≟_}
+
+
+_∉?_ : ∀ {V} {{_ : DecEquable V}} → (R : V) → (L : List V) → Dec (R ∉ L)
+r ∉? [] = yes λ ()
+r ∉? (x ∷ L) with (r == x) |  r ∉? L
+... | yes proof | _ = no λ x₁ → x₁ (here proof)
+... | no proof | yes proof₁ = yes λ { (here px) → px ↯ proof ; (there x₁) → proof₁ x₁}
+... | no proof | no proof₁ = no λ {x₁ → (λ a → x₁ (there a) ) ↯ proof₁}
+
+
 
 
 _∈?_ : ∀ {V} {{_ : DecEquable V}} → (R : V) → (L : List V) → Dec (R ∈ L)

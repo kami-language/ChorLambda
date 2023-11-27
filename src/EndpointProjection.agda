@@ -23,7 +23,9 @@ open import Relation.Nullary.Decidable using (Dec; yes; no; _because_; _×-dec_;
 open import Relation.Nullary.Negation using () renaming (contradiction to _↯_)
 open import Agda.Builtin.Bool using (true; false)
 
-open import NoBijection
+open import Base
+open import Global
+open import ChoreoTyping
 open import Local
 open import Utils
 
