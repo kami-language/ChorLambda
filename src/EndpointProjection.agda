@@ -186,10 +186,11 @@ projectType R (o＠ x) | yes _ = o
 
 -- the easy case: projection is ⊥ except if the role projected to is in the type
 easy : ∀ {Θ} → Role Θ → Type Θ → Maybe (LValue Θ) → Maybe (LValue Θ)
-easy _ _ nothing = nothing
 easy R T C with R ∈? (roles T)
-...           | yes _ = C
 ...           | no _ = just ⊥
+...           | yes _ with C
+...                      | nothing = nothing
+...                      | c = c
 
 project-∙ : ∀ {Θ} {P : Set} → Behaviour Θ → Behaviour Θ → Dec P → Maybe (Behaviour Θ)
 project-∙ M N (yes _) = just (M ∙ N)
