@@ -2,6 +2,7 @@ module Proofs where
 
 open import Data.List using (List; []; _++_; map; foldr; _∷_; [_]; filter)
 open import Data.List.Membership.Propositional using (_∈_; _∉_)
+open import Data.Fin.Properties using (_≟_)
 open import Data.Maybe using (just; nothing)
 open import Data.Product using (Σ; _×_; _,_)
 import Relation.Binary.PropositionalEquality as Eq
@@ -49,9 +50,13 @@ lemma37 {T = T} {R = R} (var x) Ts rls with (R ∈? roles T)
 ... | no ¬i = refl
 lemma37 {T = ⟶ ρ T T₁} {R = R} (Λ x .T x₂) (tabs Ts .ρ) rls with (R ∈? ( ρ ++ roles T ++ roles T₁))
 ... | yes i = i ↯ rls
-... | no ¬i = {!!}
-lemma37 {R = R} (Inl v) Ts rls = {!!}
-lemma37 {R = R} (Inr v) Ts rls = {!!}
+... | no ¬i = {!!} -- this should not require projectChoreo!
+lemma37 {T = T} {R = R} (Inl v) (tinl Ts) rls with (R ∈? roles T)
+... | yes i = i ↯ rls
+... | no ¬i = refl
+lemma37 {T = T} {R = R} (Inr v) (tinr Ts) rls with (R ∈? roles T)
+... | yes i = i ↯ rls
+... | no ¬i = refl
 lemma37 {T = T} {R = R} fst Ts rls with (R ∈? roles T)
 ... | yes i = i ↯ rls
 ... | no ¬i = refl
@@ -65,4 +70,9 @@ lemma37 {T = T₁ mul T₂} {R = R} (Pair v v₁) (tpair Ts Ts₁) rls with (R �
 lemma37 {T = T} {R = R} (O＠ x) Ts rls with (R ∈? roles T)
 ... | yes i = i ↯ rls
 ... | no ¬i = refl
-lemma37 {R = R} (com x x₁) Ts rls = {!!}
+lemma37 {T = T} {R = R} (com x x₁) tcom rls with R ∈? (roles T)
+... | yes i = i ↯ rls
+... | no ¬i with projectVal R (com x x₁) tcom |  x ≟ R | x₁ ≟ R | x ≟ x₁
+... | A | B | yes proof | D = {!proof ↯ rls!}
+... | A | B | no proof | D = {!!}
+-- lemma37 {R = R} (com x x₁) tcom {!!}
