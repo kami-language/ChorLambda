@@ -50,7 +50,7 @@ lemma37 {T = T} {R = R} (var x) Ts rls with (R ∈? roles T)
 ... | no ¬i = refl
 lemma37 {T = ⟶ ρ T T₁} {R = R} (Λ x .T x₂) (tabs Ts .ρ) rls with (R ∈? ( ρ ++ roles T ++ roles T₁))
 ... | yes i = i ↯ rls
-... | no ¬i = {!!} -- this should not require projectChoreo!
+... | no ¬i = refl
 lemma37 {T = T} {R = R} (Inl v) (tinl Ts) rls with (R ∈? roles T)
 ... | yes i = i ↯ rls
 ... | no ¬i = refl
@@ -70,9 +70,9 @@ lemma37 {T = T₁ mul T₂} {R = R} (Pair v v₁) (tpair Ts Ts₁) rls with (R �
 lemma37 {T = T} {R = R} (O＠ x) Ts rls with (R ∈? roles T)
 ... | yes i = i ↯ rls
 ... | no ¬i = refl
-lemma37 {T = T} {R = R} (com x x₁) tcom rls with R ∈? (roles T)
-... | yes i = i ↯ rls
-... | no ¬i with projectVal R (com x x₁) tcom |  x ≟ R | x₁ ≟ R | x ≟ x₁
-... | A | B | yes proof | D = {!proof ↯ rls!}
-... | A | B | no proof | D = {!!}
--- lemma37 {R = R} (com x x₁) tcom {!!}
+lemma37 {T = (⟶ [] T₁ T₂)} {R} (com r s) tcom rls with R ∈? roles (⟶ [] T₁ T₂)
+... | yes a = a ↯ rls
+... | no ¬a with projectVal R (com r s) tcom | r ≟ R | s ≟ R | r ≟ s
+... | A | no a | yes b | no c = {!b ↯ rls!}
+... | A | yes a | no b | no c = {!!}
+... | A | B | C | D = {!!}

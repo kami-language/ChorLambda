@@ -188,9 +188,7 @@ projectType R (o＠ x) | yes _ = o
 easy : ∀ {Θ} → Role Θ → Type Θ → Maybe (LValue Θ) → Maybe (LValue Θ)
 easy R T C with R ∈? (roles T)
 ...           | no _ = just ⊥
-...           | yes _ with C
-...                      | nothing = nothing
-...                      | c = c
+...           | yes _ = C
 
 project-∙ : ∀ {Θ} {P : Set} → Behaviour Θ → Behaviour Θ → Dec P → Maybe (Behaviour Θ)
 project-∙ M N (yes _) = just (M ∙ N)
@@ -211,17 +209,21 @@ projectChoreo : ∀ {Θ Γ} {T : Type Θ} → Role Θ → (C : Choreography Θ) 
 -- project Value to local value at role R
 projectVal : ∀ {Θ Γ} {T : Type Θ} → Role Θ → (C : Value Θ) → (Γ ⊢ (V C) ⦂ T) → Maybe (LValue Θ)
 projectVal {T = T} R (var x) Tc = easy R T (just (var x))
-projectVal {T = (⟶ ρ T₁ T₂)} R (Λ x t c) (tabs Tc ρ) = do
+projectVal {T = (⟶ ρ T₁ T₂)} R (Λ x t c) (tabs Tc ρ) with R ∈? (roles (⟶ ρ T₁ T₂))
+... | no _ = just ⊥
+... | yes _ = do
   c′ ←  (projectChoreo R c Tc)
-  easy R (⟶ ρ T₁ T₂) (just (Λ x (projectType R t) c′))
+  (just (Λ x (projectType R t) c′))
 projectVal {T = (T₁ ＋ T₂)} R (Inl x) (tinl Tc) = easy R (T₁ ＋ T₂) (projectVal R (x) Tc)
 projectVal {T = (T₁ ＋ T₂)} R (Inr x) (tinr Tc) = easy R (T₁ ＋ T₂) (projectVal R (x) Tc)
 projectVal {T = T} R (fst) Tc = easy R T (just fst)
 projectVal {T = T} R (snd) Tc = easy R T (just snd)
-projectVal {T = (T₁ mul T₂)} R (Pair x x₁) (tpair Tc Tc₁) = do
+projectVal {T = (T₁ mul T₂)} R (Pair x x₁) (tpair Tc Tc₁) with R ∈? (roles (T₁ mul T₂))
+... | no _ = just ⊥
+... | yes _ = do
   x′ ← projectVal R x Tc
   x₁′ ← projectVal R x₁ Tc₁
-  easy R (T₁ mul T₂) (just (Pair x′ x₁′))
+  (just (Pair x′ x₁′))
 projectVal {T = T} R (O＠ S) Tc = easy R T (just O)
 projectVal R (com S S′) Tc with S ≟ R | S′ ≟ R | S ≟ S′
 projectVal {T = ⟶ [] T T₁} R (com S S′) Tc | yes _ | yes _ | yes _ = just (Λ " x " (projectType R T) (V (var " x ")))
