@@ -225,11 +225,17 @@ projectVal {T = (T₁ mul T₂)} R (Pair x x₁) (tpair Tc Tc₁) with R ∈? (r
   x₁′ ← projectVal R x₁ Tc₁
   (just (Pair x′ x₁′))
 projectVal {T = T} R (O＠ S) Tc = easy R T (just O)
-projectVal R (com S S′) Tc with S ≟ R | S′ ≟ R | S ≟ S′
-projectVal {T = ⟶ [] T T₁} R (com S S′) Tc | yes _ | yes _ | yes _ = just (Λ " x " (projectType R T) (V (var " x ")))
-... | yes _ | no _ | no _ = just (send S′)
-... | no _ | yes _ | no _ = just (recv S)
-... | _ | _ | _ = just ⊥
+projectVal {T = ⟶ [] T T₁} R (com S S′) Tc with S ≟ S′
+... | yes _ with R ≟ S
+...  | yes _ | yes _ = {!!}
+...  | yes _ | no _ = {!!}
+... | no _ with R ≟ S | R ≟ S′
+... | yes _ | yes _ = just (Λ " x " (projectType R T) (V (var " x ")))
+... | no _ | yes _ = just ⊥
+... | no _ | no _ = just ⊥
+... | yes _ | no _ = just ⊥
+... | no _ | no _ = just (send S′)
+... | yes _ | no _ = just (recv S)
 
 
 projectChoreo R (V v) Tc = do
