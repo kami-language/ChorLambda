@@ -2,6 +2,9 @@ module Proofs where
 
 open import Data.List using (List; []; _++_; map; foldr; _∷_; [_]; filter)
 open import Data.List.Membership.Propositional using (_∈_; _∉_)
+open import  Data.List.Relation.Unary.Any using (Any; here; there)
+open import  Data.List.Relation.Unary.Any.Properties renaming (++⁺ʳ to anyConcL; ++⁺ˡ to anyConc)
+open import Data.Fin using (#_)
 open import Data.Fin.Properties using (_≟_)
 open import Data.Maybe using (just; nothing)
 open import Data.Product using (Σ; _×_; _,_)
@@ -10,6 +13,7 @@ open Eq using (_≡_; refl; cong; sym)
 open Eq.≡-Reasoning using (begin_; _≡⟨⟩_; step-≡; _∎)
 open import Relation.Nullary.Decidable using (Dec; yes; no; _because_; _×-dec_; _⊎-dec_ )
 open import Relation.Nullary.Negation using () renaming (contradiction to _↯_)
+open import Data.Vec using (Vec; _∷_; lookup) renaming ([_] to ⟨_⟩)
 
 open import Base
 open import Global
@@ -44,6 +48,14 @@ lemma36 {R = R} T rls with (R ∈? roles T)
 ... | no ¬i = refl
 
 
+embedRoles : ∀ {Θ} {R : Role Θ} → (T : Type 1) → R ∈ (roles (embed T R))
+embedRoles {Θ} {R} (⟶ ρ T T₁) with embedRoles {Θ} {R} T
+... | A = anyConcL (map (lookup ⟨ R ⟩) ρ) (anyConc (embedRoles {Θ} {R} T)) 
+embedRoles {Θ} {R} (T ＋ T₁) = anyConc (embedRoles {Θ} {R} T)
+embedRoles {Θ} {R} (T mul T₁) = anyConc (embedRoles {Θ} {R} T)
+embedRoles {R} (o＠ Data.Fin.zero) = here refl
+
+
 lemma37 : ∀ {Θ Γ T R} → (v : Value Θ) → (Ts : Γ ⊢ (V v) ⦂ T) → R ∉ (roles T) → ((projectVal R v Ts) ≡ just ⊥)
 lemma37 {T = T} {R = R} (var x) Ts rls with (R ∈? roles T)
 ... | yes i = i ↯ rls
@@ -73,6 +85,6 @@ lemma37 {T = T} {R = R} (O＠ x) Ts rls with (R ∈? roles T)
 lemma37 {T = (⟶ [] T₁ T₂)} {R} (com r s) tcom rls with R ∈? roles (⟶ [] T₁ T₂)
 ... | yes a = a ↯ rls
 ... | no ¬a with projectVal R (com r s) tcom | r ≟ R | s ≟ R | r ≟ s
-... | A | no a | yes b | no c = {!b ↯ rls!}
-... | A | yes a | no b | no c = {!!}
+... | A | no a | yes b | no c = {!!} ↯ rls
+... | A | yes a | no b | no c = ( embedRoles {!!}) ↯ rls
 ... | A | B | C | D = {!!}
