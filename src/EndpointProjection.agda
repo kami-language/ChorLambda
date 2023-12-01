@@ -18,7 +18,7 @@ open import Data.String using (String)
 open import Data.String.Properties using () renaming (_≟_ to _≟-str_)
 open import Agda.Builtin.String renaming (primStringAppend to _⊹_)
 open import Relation.Nullary.Negation using (¬_)
-open import Relation.Binary.PropositionalEquality using (_≡_; cong; sym)
+open import Relation.Binary.PropositionalEquality using (_≡_; cong; sym; refl)
 open import Relation.Nullary.Decidable using (Dec; yes; no; _because_; _×-dec_; _⊎-dec_ )
 open import Relation.Nullary.Negation using () renaming (contradiction to _↯_)
 open import Agda.Builtin.Bool using (true; false)
@@ -227,15 +227,12 @@ projectVal {T = (T₁ mul T₂)} R (Pair x x₁) (tpair Tc Tc₁) with R ∈? (r
 projectVal {T = T} R (O＠ S) Tc = easy R T (just O)
 projectVal {T = ⟶ [] T T₁} R (com S S′) Tc with S ≟ S′
 ... | yes _ with R ≟ S
-...  | yes _ | yes _ = {!!}
-...  | yes _ | no _ = {!!}
-... | no _ with R ≟ S | R ≟ S′
-... | yes _ | yes _ = just (Λ " x " (projectType R T) (V (var " x ")))
-... | no _ | yes _ = just ⊥
+... | yes _ = just (Λ " x " (projectType R T) (V (var " x ")))
+... | no _ = just ⊥
+projectVal {T = ⟶ [] T T₁} R (com S S′) Tc | no S≠S' with R ≟ S | R ≟ S′
+... | yes _ | _ = just (send S′)
+... | no _ | yes _ = just (recv S)
 ... | no _ | no _ = just ⊥
-... | yes _ | no _ = just ⊥
-... | no _ | no _ = just (send S′)
-... | yes _ | no _ = just (recv S)
 
 
 projectChoreo R (V v) Tc = do
