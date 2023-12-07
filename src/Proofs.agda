@@ -44,9 +44,9 @@ postulate
 
 lemma35 : ∀ {Θ Γ T R} → (v : Value Θ) → (Ts : Γ ⊢ (V v) ⦂ T) → R ∈ (croles (V v)) → Σ (LValue Θ) (λ w → ((projectVal R v Ts) ≡ just w))
 lemma35 (Λ x T M) (tabs Ts ρ) rls = {!!}
-lemma35 {T = T} {R = R} (Inl v) Ts rls with R ∈? croles (V (Inl v)) | R ∈? roles (T)
-... | yes A | yes B = {!!}
-... | yes A | no B = (rolesInc Ts A) ↯ B
+lemma35 {Θ = Θ} {T = T ＋ T′} {R = R} (Inl v) (tinl Ts) rls with R ∈? croles (V (Inl v)) | R ∈? roles (T ＋ T′)
+... | yes A | yes B = lemma35 v Ts rls
+... | yes A | no B = (rolesInc (tinl Ts) A) ↯ B
 ... | no A | _ = rls ↯ A
 lemma35 (Inr v) Ts rls = {!!}
 lemma35 (Pair v v₁) Ts rls = {!!}
