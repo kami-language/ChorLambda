@@ -32,6 +32,7 @@ _⟦_⟧i T rename = mapRoles T (Injection.inj rename)
 iembed : ∀{Θ} → IType 1 → Role Θ → IType Θ
 iembed = λ T n → T ⟦ (fromVec ⟨ n ⟩ (rest empty empty)) ⟧i
 
+
 mutual
 
   data _⊢ᵥ_ {Θ} (Γ : List (IType Θ)) : IType Θ -> Set where
@@ -64,7 +65,7 @@ mutual
            → (Γ ⊢ᵥ (⟶ [] (T mul T′) T))
 
     tproj2 : ∀ {T T′ : IType Θ}
-             ------------------------------------------
+        ------------------------------------------
            → (Γ ⊢ᵥ (⟶ [] (T mul T′) T′))
 
     tinl : ∀ {T T′ : IType Θ}
@@ -95,7 +96,7 @@ mutual
         → (Γ ⊢ₘ T)
 
     tcase : ∀  {T₁ T₂ T : IType Θ}
-          → (Γ ⊢ₘ (T₁ ＋ T₂)) → ((T₁ ∷ Γ) ⊢ₘ T) → ((T₂ ∷ Γ) ⊢ₘ T)
+          → (Γ ⊢ₘ (T₁ ＋ T₂)) → (Ts₁ : ((T₁ ∷ Γ) ⊢ₘ T)) → (Ts₂ : ((T₂ ∷ Γ) ⊢ₘ T))
           --------------------------------------
           → (Γ ⊢ₘ T)
 
