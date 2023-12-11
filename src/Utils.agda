@@ -61,3 +61,19 @@ _∩_ : ∀ {V} {{_ : DecEquable V}} → List V → List V → List V
 ... | yes _ = x ∷ (L ∩ L′)
 ... | no _ = L ∩ L′
 
+
+------------------------------------------------------------------------
+-- Proofs
+
+open import Data.List using (_++_)
+
+postulate
+  left-∈ : ∀{A : Set} {a : A} {as bs} -> a ∈ as -> a ∈ as ++ bs
+  right-∈ : ∀{A : Set} {a : A} {as bs} -> a ∈ bs -> a ∈ as ++ bs
+
+left-∉ : ∀{A : Set} {a : A} as bs -> a ∉ as ++ bs -> a ∉ as
+left-∉ _ _ p = λ x → p (left-∈ x)
+
+right-∉ : ∀{A : Set} {a : A} as bs -> a ∉ as ++ bs -> a ∉ bs
+right-∉ _ _ p = λ x → p (right-∈ x)
+

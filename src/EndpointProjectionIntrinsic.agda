@@ -150,18 +150,24 @@ projectNonPart⊥ {Θ} {T} {R} R∉ with R ∈? iroles T
 ... | yes R∈ = R∈ ↯ R∉
 ... | no _ = refl
 
+
 project⟶ : ∀ {Θ} {T T′ : IType Θ} {R : Role Θ} {ρ : List (Role Θ)} → R ∈ iroles (⟶ ρ T T′) →  projectIType R (⟶ ρ T T′) ≡ (projectIType R T) ⇒ (projectIType R T′)
 project⟶ = {!!}
 
-notInImage : ∀ {Θ} {T T′ : IType Θ} {R : Role Θ} {ρ : List (Role Θ)} → R ∉ (iroles (⟶ ρ T T′)) → (R ∉ iroles T)
-notInImage {Θ} {T} {T′} {R} {ρ} R∉ with R ∈? iroles T
-... | yes R∈ = anyConcL ρ (anyConc R∈) ↯ R∉
-... | no ¬R∈ = {!!}
+-- notInImage : ∀ {Θ} {T T′ : IType Θ} {R : Role Θ} {ρ : List (Role Θ)} → R ∉ (iroles (⟶ ρ T T′)) → (R ∉ iroles T)
+-- notInImage {Θ} {T} {T′} {R} {ρ} R∉ with R ∈? iroles T
+-- ... | yes R∈ = anyConcL ρ (anyConc R∈) ↯ R∉
+-- ... | no ¬R∈ = {!!}
 
-notInPreimage : ∀ {Θ} {T T′ : IType Θ} {R : Role Θ} {ρ : List (Role Θ)} → R ∉ (iroles (⟶ ρ T T′)) → (R ∉ iroles T′)
-notInPreimage {Θ} {T} {T′} {R} {ρ} R∉ with R ∈? iroles T′
-... | yes R∈ = anyConcL ρ (anyConcL (iroles T) R∈) ↯ R∉
-... | no ¬R∈ = {!!}
+-- notInPreimage : ∀ {Θ} {T T′ : IType Θ} {R : Role Θ} {ρ : List (Role Θ)} → R ∉ (iroles (⟶ ρ T T′)) → (R ∉ iroles T′)
+-- notInPreimage {Θ} {T} {T′} {R} {ρ} R∉ with R ∈? iroles T′
+-- ... | yes R∈ = anyConcL ρ (anyConcL (iroles T) R∈) ↯ R∉
+-- ... | no ¬R∈ = {!!}
+
+join-∨-⊥ : ∀{Θ} {Γ : List (ILType Θ)} -> Γ ⊩ₘ ⊥ -> Γ ⊩ₘ ⊥ -> Γ ⊩ₘ ⊥
+join-∨-⊥ (ntval (ntbotm)) Y = Y
+join-∨-⊥ X (ntval (ntbotm)) = X
+join-∨-⊥ X Y = ntapp2 X Y
 
 projectIntrinsicValue : ∀ {Θ Γ} {T : IType Θ} → (R : Role Θ) → (Γ ⊢ₘ T) → ((map (projectIType R) Γ) ⊩ᵥ (projectIType R T))
 projectIntrinsicValue R Ts = {!!}
@@ -169,13 +175,34 @@ projectIntrinsicValue R Ts = {!!}
 projectIntrinsicChoreo : ∀ {Θ Γ} {T : IType Θ} → (R : Role Θ) → (Γ ⊢ₘ T) → ((map (projectIType R) Γ) ⊩ₘ (projectIType R T))
 projectIntrinsicChoreo R (tval v) = {!!}
 
-projectIntrinsicChoreo R (tapp {T} {T′} {ρ} Ts Ts₁) with projectIntrinsicChoreo R Ts | projectIntrinsicChoreo R Ts₁ | R ∈? iroles (⟶ ρ T T′)
+projectIntrinsicChoreo R (tapp {T} {U} {ρ} Ts Ts₁) with projectIntrinsicChoreo R Ts | projectIntrinsicChoreo R Ts₁ | R ∈? iroles (⟶ ρ T U)
 ... | M | N | yes in⟶ = ntapp (transp-⊩ₘ-Type (project⟶ in⟶) M) N
-projectIntrinsicChoreo R (tapp {T} {T′} {ρ} Ts Ts₁) | M | N | no ¬in⟶ with R ∈? iroles T′
-projectIntrinsicChoreo R (tapp {T} {T′} {ρ} Ts Ts₁) | M | N | no ¬in⟶ | yes inT′ = (anyConcL ρ (anyConcL (iroles T) inT′)) ↯ ¬in⟶
-projectIntrinsicChoreo R (tapp {T} {T′} {ρ} Ts Ts₁) | M | N | no ¬in⟶ | no ¬inT′ with projectIType R (⟶ ρ T T′)
-projectIntrinsicChoreo R (tapp {T} {T′} {ρ} Ts Ts₁) | ntval ntbotm | N | no ¬in⟶ | no ¬inT′ | ⊥ = transp-⊩ₘ-Type (projectNonPart⊥ (notInPreimage ¬in⟶)) N
-projectIntrinsicChoreo R (tapp {T} {T′} {ρ} Ts Ts₁) | M | N | no ¬in⟶ | no ¬inT′ | TN  = {!!}
+projectIntrinsicChoreo R (tapp {T} {U} {ρ} Ts Ts₁) | M | N | no R∉ρTU =
+  let
+      -- construct proofs that since R is not in the union of ρ, T and U
+      -- it cannot be in T and U individually as well
+      R∉TU : R ∉ iroles T ++ iroles U
+      R∉TU = right-∉ ρ _ R∉ρTU
+
+      R∉U : R ∉ iroles U
+      R∉U = right-∉ _ _ R∉TU
+
+      R∉T : R ∉ iroles T
+      R∉T = left-∉ _ _ R∉TU
+
+      -- transport the terms M and N to a type which is properly ⊥
+      M⊥ = transp-⊩ₘ-Type (projectNonPart⊥ R∉ρTU) M
+      N⊥ = transp-⊩ₘ-Type (projectNonPart⊥ R∉T) N
+
+      -- use the `join-∨-⊥` function to construct the result term
+      -- which should throw away an arg if it is `ntval ntbotm`
+      Res⊥ = join-∨-⊥ M⊥ N⊥
+
+      -- construct the result term by transporting back from ⊥ to the required
+      -- type
+      Res = transp-⊩ₘ-Type (sym (projectNonPart⊥ R∉U)) Res⊥
+  in Res
+
 
 projectIntrinsicChoreo R (tsel Ts r s l) = {!!}
 projectIntrinsicChoreo R (tcase Ts Ts₁ Ts₂) = {!!}
