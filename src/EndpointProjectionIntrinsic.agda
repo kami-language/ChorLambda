@@ -1,12 +1,15 @@
 
 open import Data.List using (List; []; _++_; _∷_; [_]; map)
-open import Data.List.Membership.Propositional using (_∈_)
+open import Data.List.Membership.Propositional using (_∈_; _∉_)
+open import Data.List.Relation.Unary.Any.Properties renaming (++⁺ʳ to anyConcL; ++⁺ˡ to anyConc)
+
 open import Data.Maybe using (Maybe; _>>=_; just; nothing) renaming (map to _⟫_)
 open import Data.Product using (Σ; _×_; _,_; _,′_; proj₂)
 open import Relation.Nullary.Decidable using (Dec; yes; no; _because_; _×-dec_; _⊎-dec_ )
 open import Function using (case_of_)
 open import Data.Fin.Properties using (_≟_)
 open import Relation.Binary.PropositionalEquality using (_≡_; cong; sym; refl)
+open import Relation.Nullary.Negation using () renaming (contradiction to _↯_)
 
 open import Base
 open import Utils
@@ -128,7 +131,11 @@ project-∙ M (V ⊥) (no _) = just M
 project-∙ _ N (no _) = just N
 -}
 
-  
+transp-⊩ᵥ-Type : ∀{Θ Γ} {T T' : ILType Θ} -> T ≡ T' -> Γ ⊩ᵥ T -> Γ ⊩ᵥ T'
+transp-⊩ᵥ-Type refl Ts = Ts
+
+transp-⊩ₘ-Type : ∀{Θ Γ} {T T' : ILType Θ} -> T ≡ T' -> Γ ⊩ₘ T -> Γ ⊩ₘ T'
+transp-⊩ₘ-Type refl Ts = Ts
 
 projectIType : ∀ {Θ} → Role Θ → IType Θ → ILType Θ
 projectIType R T with R ∈? iroles T
@@ -138,38 +145,37 @@ projectIType R (T ＋ T₁) | yes _ = projectIType R T ＋ projectIType R T₁
 projectIType R (T mul T₁) | yes _ = projectIType R T mul projectIType R T₁
 projectIType R (o＠ r) | yes _ = o
 
+projectNonPart⊥ : ∀ {Θ} {T : IType Θ} {R : Role Θ} → (R ∉ (iroles T)) → (projectIType R T) ≡ ⊥
+projectNonPart⊥ {Θ} {T} {R} R∉ with R ∈? iroles T
+... | yes R∈ = R∈ ↯ R∉
+... | no _ = refl
+
+project⟶ : ∀ {Θ} {T T′ : IType Θ} {R : Role Θ} {ρ : List (Role Θ)} → R ∈ iroles (⟶ ρ T T′) →  projectIType R (⟶ ρ T T′) ≡ (projectIType R T) ⇒ (projectIType R T′)
+project⟶ = {!!}
+
+notInImage : ∀ {Θ} {T T′ : IType Θ} {R : Role Θ} {ρ : List (Role Θ)} → R ∉ (iroles (⟶ ρ T T′)) → (R ∉ iroles T)
+notInImage {Θ} {T} {T′} {R} {ρ} R∉ with R ∈? iroles T
+... | yes R∈ = anyConcL ρ (anyConc R∈) ↯ R∉
+... | no ¬R∈ = {!!}
+
+notInPreimage : ∀ {Θ} {T T′ : IType Θ} {R : Role Θ} {ρ : List (Role Θ)} → R ∉ (iroles (⟶ ρ T T′)) → (R ∉ iroles T′)
+notInPreimage {Θ} {T} {T′} {R} {ρ} R∉ with R ∈? iroles T′
+... | yes R∈ = anyConcL ρ (anyConcL (iroles T) R∈) ↯ R∉
+... | no ¬R∈ = {!!}
+
 projectIntrinsicValue : ∀ {Θ Γ} {T : IType Θ} → (R : Role Θ) → (Γ ⊢ₘ T) → ((map (projectIType R) Γ) ⊩ᵥ (projectIType R T))
 projectIntrinsicValue R Ts = {!!}
 
-
 projectIntrinsicChoreo : ∀ {Θ Γ} {T : IType Θ} → (R : Role Θ) → (Γ ⊢ₘ T) → ((map (projectIType R) Γ) ⊩ₘ (projectIType R T))
-projectIntrinsicChoreo R (tval v) = ?
-projectIntrinsicChoreo R (tapp {T} {T′} {ρ} Ts Ts₁) with R ∈? iroles (⟶ ρ T T′) | projectIntrinsicChoreo R Ts | projectIntrinsicChoreo R Ts₁
-... | yes a | M | N = ntapp {!M!} N
-... | no a | M | N = {!!}
+projectIntrinsicChoreo R (tval v) = {!!}
+
+projectIntrinsicChoreo R (tapp {T} {T′} {ρ} Ts Ts₁) with projectIntrinsicChoreo R Ts | projectIntrinsicChoreo R Ts₁ | R ∈? iroles (⟶ ρ T T′)
+... | M | N | yes in⟶ = ntapp (transp-⊩ₘ-Type (project⟶ in⟶) M) N
+projectIntrinsicChoreo R (tapp {T} {T′} {ρ} Ts Ts₁) | M | N | no ¬in⟶ with R ∈? iroles T′
+projectIntrinsicChoreo R (tapp {T} {T′} {ρ} Ts Ts₁) | M | N | no ¬in⟶ | yes inT′ = (anyConcL ρ (anyConcL (iroles T) inT′)) ↯ ¬in⟶
+projectIntrinsicChoreo R (tapp {T} {T′} {ρ} Ts Ts₁) | M | N | no ¬in⟶ | no ¬inT′ with projectIType R (⟶ ρ T T′)
+projectIntrinsicChoreo R (tapp {T} {T′} {ρ} Ts Ts₁) | ntval ntbotm | N | no ¬in⟶ | no ¬inT′ | ⊥ = transp-⊩ₘ-Type (projectNonPart⊥ (notInPreimage ¬in⟶)) N
+projectIntrinsicChoreo R (tapp {T} {T′} {ρ} Ts Ts₁) | M | N | no ¬in⟶ | no ¬inT′ | TN  = {!!}
+
 projectIntrinsicChoreo R (tsel Ts r s l) = {!!}
 projectIntrinsicChoreo R (tcase Ts Ts₁ Ts₂) = {!!}
-
-{-
-
-projectIntrinsicValue : ∀ {Θ Γ} {T : IType Θ} → (R : Role Θ) → (Γ ⊢ᵥ T) → Σ (List (ILType Θ)) (λ Γ′ → Γ′ ⊩ᵥ (projectIType R T)) -- ((map (projectIType R) Γ) ⊩ₘ (projectIType R T))
-projectIntrinsicValue R Ts = {!!}
-
-
-projectIntrinsicChoreo : ∀ {Θ Γ} {T : IType Θ} → (R : Role Θ) → (Γ ⊢ₘ T) → Σ (List (ILType Θ)) (λ Γ′ → Γ′ ⊩ₘ (projectIType R T))
-projectIntrinsicChoreo R (tval v) = let (A , B) = projectIntrinsicValue R v
-                                    in (A , ntval B)
-projectIntrinsicChoreo R (tapp {T} {T′} {ρ} Ts Ts₁) with R ∈? iroles (⟶ ρ T T′) | R ∈? iroles T′
-... | yes a | yes b = let (A , B) = (projectIntrinsicChoreo R Ts)
-                          (_ , C) = (projectIntrinsicChoreo R Ts₁)
-                      in (A , ntapp {!C!} {!Cäh hupsi eingepennt ^^
-                      !} )
-... | yes a | no b = {!!} --ntapp (projectIntrinsicChoreo R Ts) (projectIntrinsicChoreo R Ts₁)
-... | no a | _ =  {!!}
-{-
-... | yes a = ntapp (projectIntrinsicChoreo R {!T!}) (projectIntrinsicChoreo R Ts₁)
-... | no _ with projectIntrinsicChoreo R Ts | (projectIntrinsicChoreo R Ts₁)
-... | M | N = {!M!} -}
-projectIntrinsicChoreo R (tsel Ts r s l) = {!!}
-projectIntrinsicChoreo R (tcase Ts Ts₁ Ts₂) = {!!}
--}
