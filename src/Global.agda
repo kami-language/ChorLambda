@@ -1,44 +1,63 @@
 module Global where
 
-open import Data.List using (List; map)
-open import Data.Fin using (Fin)
-open import Data.Product using (_×_)
-
-open import Base
+open import Prelude
 
 ----------------------------------------------------
--- language for choreographies
+-- global types
 
--- a type is parametrized by the maximal number of different roles it uses
-data Type (R : Roles) : Set where
-  ⟶ :  (ρ : List (Role R)) → Type R → Type R → Type R -- abstraction type: R may also participate in addition to roles T and roles T'
-  _＋_ : Type R → Type R → Type R -- sum type
-  _mul_ : Type R → Type R → Type R -- product type
-  o＠ : (r : (Fin R)) → Type R -- unit type at role r
+Role = Nat
+Roles = List Role
 
--- map over the roles of a type
-mapRoles : {R Θ : Roles} → Type R → (Fin R → Fin Θ) → Type Θ
-mapRoles (⟶ x T T₁) f = ⟶ (map f x) (mapRoles T f) (mapRoles T₁ f)
-mapRoles (T ＋ T₁) f = (mapRoles T f) ＋ mapRoles T₁ f
-mapRoles (T mul T₁) f = (mapRoles T f) mul (mapRoles T₁ f)
-mapRoles (o＠ r) f = o＠ (f r)
+data GType : (ℝ : Roles) → Set where
+  ⇒ : ∀ {R S} → (ρ : List Role) → GType R → GType S → GType (ρ ++ R ++ S)
+  _⊛_ : ∀ {R S} → GType R → GType S → GType (R ++ S)
+  _⊕_ : ∀ {R S} → GType R → GType S → GType (R ++ S)
+  ⦅⦆＠ : (r : Role) → GType [ r ]
+  
 
-data Choreography (R : Roles) : Set
+----------------------------------------------------
+-- role renaming
 
-data Value (R : Roles) : Set where
-  var : (v : Var) → Value R
-  Λ : (x : Var) → (T : Type R) → (M : Choreography R) → Value R -- lambda abstraction
-  Inl : (v : Value R) → Value R -- sum ctor
-  Inr : (v : Value R) → Value R -- sum ctor
-  fst : Value R -- pair destructor
-  snd : Value R -- pair destructor
-  Pair : (a : Value R) → (b : Value R) → Value R
-  O＠ : (r : Role R) → Value R -- unit value at role R
-  com : (r : Role R) → (s : Role R) → Value R -- communicate: take value at role R and return it at role S
+{-
+renameSingle : ∀ {r} → (s : Role) → GType [ r ] → GType [ s ]
+renameSingle s T = {!!}
+-}
 
-data Choreography R where
-  V : (v : Value R) → Choreography R
---  _⦅_⦆ : ∀{Θ} → Name → List (Role Θ) → Choreography R -- evaluate to choreo f instantiated with roles R
-  _∙_ : (M : Choreography R) → (N : Choreography R) → Choreography R -- application
-  case : (M : Choreography R) → (N : Var × Choreography R) → (N′ : Var × Choreography R) → Choreography R -- sum destructor
-  select : (r : Role R) → (s : Role R) → (l : Label) → (M : Choreography R) → Choreography R -- S informs R it has selected l then continues with M
+rename : ∀ {R} → (f : Nat → Nat) → GType R → GType (map f R)
+rename f (⇒ ρ T T₁) = {!!}
+rename f (T ⊛ T₁) = {!!}
+rename f (T ⊕ T₁) = coe (rename f T ⊕ rename f T₁) {!cong GType ?!}
+rename f (⦅⦆＠ r) = ⦅⦆＠ (f r)
+
+----------------------------------------------------
+-- choreographies
+
+SomeGType = Σ Roles GType
+
+Context = List (SomeGType)
+
+mutual
+
+  infix 3 _⊩ᵥ_
+  data _⊩ᵥ_ (Γ : Context) : {R : Roles} → GType R -> Set where
+
+    tabs : {R R′ : Roles} {T : GType R} {T′ : GType R′}
+         → (ρ : List Role) → (R , T) ∷ Γ ⊩ₘ T′
+           -----------------------------------
+         → Γ ⊩ᵥ ⇒ ρ T T′
+         
+    tvar : {R : Roles} {T : GType R}
+         → (R , T) ∈ Γ
+           ------------------------
+         → Γ ⊩ᵥ T
+ 
+    tunit : (r : Role)
+           --------------
+          → Γ ⊩ᵥ ⦅⦆＠ r
+ 
+    tcom : (r s : Role) → {T : GType [ s ]}
+           ------------------------
+         → Γ ⊩ᵥ ⇒ [] T (rename (λ x → r) T) 
+
+  infix 3 _⊩ₘ_
+  data _⊩ₘ_ (Γ : Context) : {R : Roles} → GType R -> Set where
