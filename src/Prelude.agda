@@ -1,22 +1,34 @@
 module Prelude where
 
 open import Level using (Level)
+open import Agda.Primitive using (_⊔_)
 open import Agda.Builtin.Nat public using (Nat; zero; suc)
 open import Agda.Builtin.List public using (List; []; _∷_)
 open import Agda.Builtin.Sigma public
 open import Agda.Builtin.Equality public
-open import Relation.Nullary using (¬_) renaming (contradiction to _↯_) -- this might be forbidden
+open import Relation.Nullary using (¬_)
+open import Relation.Nullary.Negation using () renaming (contradiction to _↯_) -- this might be forbidden
 
+------------------------------------------------------------------------
+-- product
     
+_×_ : ∀ {ℓ 𝓂} (A : Set ℓ) (B : Set 𝓂) → Set (ℓ ⊔ 𝓂)
+A × B = Σ A (λ x → B)
+
 ------------------------------------------------------------------------
 -- equality stuff
 
-cong : ∀ {ℓ} {A B : Set ℓ} {x y : A} (f : A → B) → x ≡ y → f x ≡ f y
+cong : ∀ {ℓ 𝓂} {A : Set ℓ} {B : Set 𝓂} {x y : A} (f : A → B) → x ≡ y → f x ≡ f y
 cong f refl = refl
 
+sym : ∀ {ℓ} {X Y : Set ℓ} (eq : X ≡ Y) → (Y ≡ X)
+sym refl = refl
 
 coe : ∀ {ℓ} {X Y : Set ℓ} (x : X) (eq : X ≡ Y) → Y
 coe x refl = x
+
+trans : ∀ {ℓ} {X Y Z : Set ℓ} (eq : X ≡ Y) (eq₁ : Y ≡ Z) → X ≡ Z
+trans refl refl = refl
 
 ------------------------------------------------------------------------
 -- decidability stuff
@@ -158,6 +170,9 @@ map-∈ (there a∈L) = there (map-∈ a∈L)
 ≡-∷ : {A : Set} {a : A} {L M : List A} → L ≡ M → a ∷ L ≡ a ∷ M
 ≡-∷ {a = a} refl = cong (λ x → a ∷ x) refl
 
-map-++ : {A B : Set} {L M : List A} {f : A → B} → map f L ++ map f M ≡ map f (L ++ M) 
-map-++ {L = []} = refl
-map-++ {L = x ∷ L} = ≡-∷ (map-++ {L = L})
+map-++ : {A B : Set} (L M : List A) {f : A → B} → map f L ++ map f M ≡ map f (L ++ M) 
+map-++ [] M = refl
+map-++ (x ∷ L) M = ≡-∷ (map-++ L M)
+
+≡-++ : {A : Set} {L M N : List A} → L ≡ M → N ++ L ≡ N ++ M
+≡-++ refl = refl
