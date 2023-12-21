@@ -7,35 +7,33 @@ open import Base
 -- local types
 
 
-data LType : (ℝ : Roles) → Set where
-  _⟶_ : ∀ {R S} → LType R → LType S → LType (R ++ S)
-  _⋆_ : ∀ {R S} → LType R → LType S → LType (R ++ S)
-  _＋_ : ∀ {R S} → LType R → LType S → LType (R ++ S)
-  ⦅⦆ : LType []
-  ⊥ : LType []
+data LType : Set where
+  _⟶_ : LType  → LType  → LType
+  _⋆_ : LType  → LType  → LType
+  _＋_ : LType  → LType  → LType
+  ⦅⦆ : LType
+  ⊥ : LType
   
 
 ----------------------------------------------------
 -- behaviours
 
-SomeLType = Σ Roles LType
-
-Context = List (SomeLType)
+Context = List (LType)
 
 mutual
 
   infix 3 _⊢ᵥ_
-  data _⊢ᵥ_ (Γ : Context) : {R : Roles} → LType R → Set where
-    ntsend : ∀ {R : Roles} {T : LType R} (r : Role)
+  data _⊢ᵥ_ (Γ : Context) : LType → Set where
+    ntsend : ∀ {T : LType} (r : Role)
              --------------------------------------
            → Γ ⊢ᵥ T ⟶ ⊥
 
-    ntrecv : ∀ {R : Roles} {T : LType R} (r : Role)
+    ntrecv : ∀ {T : LType} (r : Role)
              --------------------------------------
            → Γ ⊢ᵥ ⊥ ⟶ T
 
-    ntvar : ∀ {R : Roles} {T : LType R}
-          → (_ , T) ∈ Γ
+    ntvar : ∀ {T : LType}
+          → T ∈ Γ
             ------------
           → Γ ⊢ᵥ T
           
@@ -43,60 +41,59 @@ mutual
     
     ntbotm : Γ ⊢ᵥ ⊥
     
-    ntabs : ∀ {R R′ : Roles} {T : LType R} {T′ : LType R′}
-          → (_ , T) ∷ Γ ⊢ₘ T′
+    ntabs : ∀ {T T′ : LType}
+          → T ∷ Γ ⊢ₘ T′
             -----------------
           → Γ ⊢ᵥ T ⟶ T′
 
-    ntpair : ∀ {R R′ : Roles} {T : LType R} {T′ : LType R′}
+    ntpair : ∀ {T T′ : LType}
            → Γ ⊢ᵥ T → Γ ⊢ᵥ T′
           --------------------
            → Γ ⊢ᵥ (T ⋆ T′)
           
-    ntproj1 : ∀ {R R′ : Roles} {T : LType R} {T′ : LType R′}
+    ntproj1 : ∀ {T T′ : LType}
              -----------------------------------------------
            → Γ ⊢ᵥ (T ⋆ T′) ⟶ T
 
-    ntproj2 : ∀ {R R′ : Roles} {T : LType R} {T′ : LType R′}
+    ntproj2 : ∀ {T T′ : LType}
              -----------------------------------------------
             → Γ ⊢ᵥ (T ⋆ T′) ⟶ T′
 
-    ntinl : ∀ {R R′ : Roles} {T : LType R} {T′ : LType R′}
+    ntinl : ∀ {T T′ : LType}
           → Γ ⊢ᵥ T
             -----------
          → Γ ⊢ᵥ T ＋ T′
 
-    ntinr : ∀ {R R′ : Roles} {T : LType R} {T′ : LType R′}
+    ntinr : ∀ {T T′ : LType}
           → Γ ⊢ᵥ T′
             ------------
           → Γ ⊢ᵥ T ＋ T′
 
 
-
   infix 3 _⊢ₘ_
-  data _⊢ₘ_ (Γ : Context) : {R : Roles} → LType R → Set where
+  data _⊢ₘ_ (Γ : Context) : LType → Set where
 
-    ntval : ∀  {R : Roles} {T : LType R}
+    ntval : ∀ {T : LType}
           → Γ ⊢ᵥ T
             -------
           → Γ ⊢ₘ T
           
-    ntchor⊕ : ∀ {R : Roles} {T : LType R}
+    ntchor⊕ : ∀ {T : LType}
              → (r : Role) (l : Label) → Γ ⊢ₘ T
                --------------------------------------------
              → Γ ⊢ₘ T
 
-    ntoff& : ∀ {R : Roles} {T : LType R}
+    ntoff& : ∀ {T : LType}
            → (r : Role) → List (Label × (Γ ⊢ₘ T))
              ----------------------------------------
            → Γ ⊢ₘ T
 
-    ntcase : ∀ {R₁ R₂ R : Roles} {T₁ : LType R₁} {T₂ : LType R₂} {T : LType R}
-           → Γ ⊢ₘ T₁ ＋ T₂ → (_ , T₁) ∷ Γ ⊢ₘ T → (_ , T₂) ∷ Γ ⊢ₘ T
+    ntcase : ∀ {T₁ T₂ T : LType}
+           → Γ ⊢ₘ T₁ ＋ T₂ →  T₁ ∷ Γ ⊢ₘ T → T₂ ∷ Γ ⊢ₘ T
              --------------------------------------------------------------------
            → Γ ⊢ₘ T
            
-    ntapp : ∀ {R R′ : Roles} {T : LType R} {T′ : LType R′}
+    ntapp : ∀ {T T′ : LType}
           → Γ ⊢ₘ (T ⟶ T′) → Γ ⊢ₘ T
             -------------------------------------
           → Γ ⊢ₘ T′
@@ -105,7 +102,7 @@ mutual
             ----------------------
            → Γ ⊢ₘ ⊥
 
-    nt⊔ : ∀ {Γ′ Γ″ : Context} {R R′ : Roles} {T : LType R} {T′ : LType R′}
+    nt⊔ : ∀ {Γ′ Γ″ : Context} {T T′ : LType}
         → Γ′ ⊢ₘ T → Γ″ ⊢ₘ T′
           -------------------------------------
         → Γ ⊢ₘ T
