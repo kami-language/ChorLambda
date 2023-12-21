@@ -8,7 +8,7 @@ open import Base
 
 
 data GType : (ℝ : Roles) → Set where
-  _⇒⟨_⟩_ : ∀ {R S} → GType R → (ρ : List Role) → GType S → GType (ρ ++ R ++ S)
+  _⇒⟨_⟩_ : ∀ {R S} → GType R → (ρ : List Role) → GType S → GType ((R ++ ρ) ++ S)
   _⊛_ : ∀ {R S} → GType R → GType S → GType (R ++ S)
   _⊕_ : ∀ {R S} → GType R → GType S → GType (R ++ S)
   ⦅⦆＠ : (r : Role) → GType [ r ]
@@ -27,7 +27,10 @@ foo R S = cong GType (map-++ R S)
 
 -- TODO make this pretty
 rename : ∀ {R} → (f : Nat → Nat) → GType R → GType (map f R)
-rename f (_⇒⟨_⟩_ {R} {S} T ρ T₁) = coe (coe ( (rename f T) ⇒⟨ map f ρ ⟩ (rename f T₁)) (cong GType (≡-++ (map-++ R S)))) (cong GType (map-++ ρ (R ++ S)))
+rename f (_⇒⟨_⟩_ {R} {S} T ρ T₁) =
+  let
+    fooo = cong GType (≡-++-right (map-++ R ρ))
+  in coe (coe (rename f T ⇒⟨ map f ρ ⟩ rename f T₁) fooo) (foo (R ++ ρ) S)
 rename f (_⊛_ {R} {S} T T₁) =  coe (rename f T ⊛ rename f T₁) (foo R S)
 rename f (_⊕_ {R} {S} T T₁) = coe (rename f T ⊕ rename f T₁) (foo R S)
 rename f (⦅⦆＠ r) = ⦅⦆＠ (f r)
@@ -76,12 +79,12 @@ mutual
            → Γ ⊩ᵥ (T ⊛ T′) ⇒⟨ [] ⟩  T′
            
     tinl : {R R′ : Roles} {T : GType R} {T′ : GType R′}
-         → Γ ⊩ₘ T
+         → Γ ⊩ᵥ T
            ------------
          → Γ ⊩ᵥ T ⊕ T′
          
     tinr : {R R′ : Roles} {T : GType R} {T′ : GType R′}
-         → Γ ⊩ₘ T′
+         → Γ ⊩ᵥ T′
            ------------
          → Γ ⊩ᵥ T ⊕ T′
 

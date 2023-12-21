@@ -6,7 +6,7 @@ open import Agda.Builtin.Nat public using (Nat; zero; suc)
 open import Agda.Builtin.List public using (List; []; _∷_)
 open import Agda.Builtin.Sigma public
 open import Agda.Builtin.Equality public
-open import Agda.Builtin.Bool public
+-- open import Agda.Builtin.Bool public
 open import Relation.Nullary using (¬_)
 open import Relation.Nullary.Negation using () renaming (contradiction to _↯_) -- this might be forbidden
 
@@ -18,26 +18,26 @@ A × B = Σ A (λ x → B)
 
 ------------------------------------------------------------------------
 -- bool
-
+{-
 infix  0 if_then_else_
 
 if_then_else_ : ∀ {ℓ} {A : Set ℓ} → Bool → A → A → A
 if true  then t else f = t
 if false then t else f = f
-
+-}
 ------------------------------------------------------------------------
 -- equality stuff
 
 cong : ∀ {ℓ 𝓂} {A : Set ℓ} {B : Set 𝓂} {x y : A} (f : A → B) → x ≡ y → f x ≡ f y
 cong f refl = refl
 
-sym : ∀ {ℓ} {X Y : Set ℓ} (eq : X ≡ Y) → (Y ≡ X)
+sym : ∀ {ℓ} {Ξ : Set ℓ} {X Y : Ξ} (eq : X ≡ Y) → (Y ≡ X)
 sym refl = refl
 
 coe : ∀ {ℓ} {X Y : Set ℓ} (x : X) (eq : X ≡ Y) → Y
 coe x refl = x
 
-trans : ∀ {A : Set} {X Y Z : A} (eq : X ≡ Y) (eq₁ : Y ≡ Z) → X ≡ Z
+trans : ∀ {ℓ} {A : Set ℓ} {X Y Z : A} (eq : X ≡ Y) (eq₁ : Y ≡ Z) → X ≡ Z
 trans refl refl = refl
 
 
@@ -75,12 +75,12 @@ data Dec {ℓ} (A : Set ℓ) : Set ℓ where
   no : (¬p : ¬ A) → Dec A
 
 
-map′ : ∀ {A B : Set} → (A → B) → (B → A) → Dec A → Dec B
+map′ : ∀ {ℓ} {A B : Set ℓ} → (A → B) → (B → A) → Dec A → Dec B
 map′ A→B B→A (yes p) = yes (A→B p)
 map′ A→B B→A (no ¬p) = no λ b → B→A b ↯ ¬p
 
 
-record DecEquable (A : Set) : Set where
+record DecEquable {ℓ} (A : Set ℓ) : Set ℓ where
   field
     _==_ : ∀ (x y : A) → Dec (x ≡ y)
 
@@ -121,13 +121,13 @@ instance
 [_] : ∀ {A : Set} (a : A) → List A
 [ a ] = a ∷ []
 
-map : ∀ {A B : Set} → (A → B) → List A → List B
+map : ∀ {ℓ} {A B : Set ℓ} → (A → B) → List A → List B
 map f []       = []
 map f (x ∷ xs) = f x ∷ map f xs
 
 
 infixr 5 _++_
-_++_ : ∀ {A : Set} → List A → List A → List A
+_++_ : ∀ {ℓ} {A : Set ℓ} → List A → List A → List A
 []       ++ ys = ys
 (x ∷ xs) ++ ys = x ∷ (xs ++ ys)
 
@@ -143,7 +143,7 @@ _∉_ : ∀ {x} {X : Set x} → X → List X → Set x
 A ∉ Γ = ¬ (A ∈ Γ)
 
 
-_∈?_ : ∀ {V} {{_ : DecEquable V}} → (R : V) → (L : List V) → Dec (R ∈ L)
+_∈?_ : ∀ {ℓ} {V : Set ℓ} {{_ : DecEquable V}} → (R : V) → (L : List V) → Dec (R ∈ L)
 r ∈? [] = no λ ()
 r ∈? (x ∷ L) with (r == x) | r ∈? L
 ...               | yes refl | _ = yes here
@@ -152,7 +152,7 @@ r ∈? (x ∷ L) with (r == x) | r ∈? L
 
 
 
-_∉?_ : ∀ {V} {{_ : DecEquable V}} → (R : V) → (L : List V) → Dec (R ∉ L)
+_∉?_ : ∀ {ℓ} {V : Set ℓ} {{_ : DecEquable V}} → (R : V) → (L : List V) → Dec (R ∉ L)
 r ∉? [] = yes λ ()
 r ∉? (x ∷ L) with (r == x) |  r ∉? L
 ... | yes refl | _ = no λ x₁ → x₁ here
@@ -160,7 +160,7 @@ r ∉? (x ∷ L) with (r == x) |  r ∉? L
 ... | no proof | no proof₁ = no λ {x₁ → (λ a → x₁ (there a) ) ↯ proof₁}
 
 
-_∖_ : ∀ {A} {{_ : DecEquable A}} → List A → A → List A
+_∖_ : ∀ {ℓ} {A : Set ℓ} {{_ : DecEquable A}} → List A → A → List A
 [] ∖ a = []
 (x ∷ L) ∖ a with a == x
 ... | yes _ = L ∖ a
@@ -168,7 +168,7 @@ _∖_ : ∀ {A} {{_ : DecEquable A}} → List A → A → List A
 
 
 -- carefule this does random things with duplicates
-_∩_ : ∀ {V} {{_ : DecEquable V}} → List V → List V → List V
+_∩_ : ∀ {ℓ} {V : Set ℓ} {{_ : DecEquable V}} → List V → List V → List V
 [] ∩ L′ = []
 (x ∷ L) ∩ L′ with x ∈? L′
 ... | yes _ = x ∷ (L ∩ L′)
@@ -187,48 +187,54 @@ keep LL = λ { here → here ; (there x) → there (LL x) }
 
 ------------------------------------------------------------------------
 -- list stuff proofs
-{-
-++-assoc :  ∀{A : Set} {as bs cs} -> (as ++ bs) ++ cs ≡ as ++ bs ++ cs
-++-assoc {as = []} = refl
-++-assoc {as = a ∷ as} = {!!}
--}
 
-left-∈ : ∀{A : Set} {a : A} {as bs} -> a ∈ as -> a ∈ (as ++ bs)
+++-assoc : ∀ {ℓ} {A : Set ℓ} (x y z : List A) → (x ++ (y ++ z)) ≡ ((x ++ y) ++ z)
+++-assoc []       ys zs = refl
+++-assoc (x ∷ xs) ys zs = cong (x ∷_) (++-assoc xs ys zs)
+
+left-∈ : ∀ {ℓ} {A : Set ℓ} {a : A} {as bs} -> a ∈ as -> a ∈ (as ++ bs)
 left-∈ here = here
 left-∈ (there a∈as) = there (left-∈ a∈as)
 
-right-∈ : ∀{A : Set} {a : A} {as bs} -> a ∈ bs -> a ∈ as ++ bs
+right-∈ : ∀ {ℓ} {A : Set ℓ} {a : A} {as bs} -> a ∈ bs -> a ∈ as ++ bs
 right-∈ {as = []} a∈bs = a∈bs
 right-∈ {as = x ∷ as} a∈bs = there (right-∈ a∈bs)
 
-left-∉ : ∀{A : Set} {a : A} as bs -> a ∉ as ++ bs -> a ∉ as
+left-∉ : ∀ {ℓ} {A : Set ℓ} {a : A} as bs -> a ∉ as ++ bs -> a ∉ as
 left-∉ _ _ p = λ x → p (left-∈ x)
 
-right-∉ : ∀{A : Set} {a : A} as bs -> a ∉ as ++ bs -> a ∉ bs
+right-∉ : ∀ {ℓ} {A : Set ℓ} {a : A} as bs -> a ∉ as ++ bs -> a ∉ bs
 right-∉ _ _ p = λ x → p (right-∈ x)
 
-map-∈ : ∀ {A B : Set} {a : A} {L : List A} {f : A → B} → a ∈ L → f a ∈ map f L
+map-∈ : ∀ {ℓ} {A B : Set ℓ} {a : A} {L : List A} {f : A → B} → a ∈ L → f a ∈ map f L
 map-∈ here = here
 map-∈ (there a∈L) = there (map-∈ a∈L)
 
-∷-∈ : ∀{A : Set} {a b : A} as -> a ∈ as -> a ∈ b ∷ as
+∷-∈ : ∀ {ℓ} {A : Set ℓ} {a b : A} as -> a ∈ as -> a ∈ b ∷ as
 ∷-∈ = λ as → there
 
-≡-∷ : {A : Set} {a : A} {L M : List A} → L ≡ M → a ∷ L ≡ a ∷ M
+≡-∈ : ∀ {ℓ} {A : Set ℓ} {a : A} {L M : List A} → a ∈ M → L ≡ M → a ∈ L
+≡-∈ a∈M refl = a∈M
+
+≡-∷ : ∀ {ℓ} {A : Set ℓ} {a : A} {L M : List A} → L ≡ M → a ∷ L ≡ a ∷ M
 ≡-∷ {a = a} refl = cong (λ x → a ∷ x) refl
 
-map-++ : {A B : Set} (L M : List A) {f : A → B} → map f L ++ map f M ≡ map f (L ++ M) 
+map-++ : ∀ {ℓ} {A B : Set ℓ} (L M : List A) {f : A → B} → map f L ++ map f M ≡ map f (L ++ M) 
 map-++ [] M = refl
 map-++ (x ∷ L) M = ≡-∷ (map-++ L M)
 
-≡-++ : {A : Set} {L M N : List A} → L ≡ M → N ++ L ≡ N ++ M
+≡-++ : ∀ {ℓ} {A : Set ℓ} {L M N : List A} → L ≡ M → N ++ L ≡ N ++ M
 ≡-++ refl = refl
 
-∈→∈? : ∀ {A : Set} {{_ : DecEquable A}} {r : A} {R} → r ∈ R → Σ (r ∈ R) (λ p → r ∈? R ≡ yes p)
-∈→∈? {r = r} here with r == r
-... | yes refl = (here , refl)
-... | no ¬p = refl ↯ ¬p
-∈→∈? {r = r} {R = (b ∷ Γ)} (there x) with r == b | r ∈? Γ
-... | yes refl | _ = (here , refl)
-... | no ¬p | yes r∈Γ = (there r∈Γ , cong (λ x → yes (there x)) refl)
-... | no ¬p | no ¬r∈Γ = x ↯ ¬r∈Γ
+≡-++-right : ∀ {ℓ} {A : Set ℓ} {L M N : List A} → L ≡ M → L ++ N ≡ M ++ N
+≡-++-right refl = refl
+
+∈→∈? : ∀ {ℓ} {A : Set ℓ} {{_ : DecEquable A}} {r : A} {R} → r ∈ R → Σ (r ∈ R) (λ p → r ∈? R ≡ yes p)
+∈→∈? {r = r} {R = R} X with r ∈? R
+... | yes p = _ , refl
+... | no ¬p = X ↯ ¬p
+
+∉→∈? : ∀ {ℓ} {A : Set ℓ} {{_ : DecEquable A}} {r : A} {R} → r ∉ R → Σ (r ∉ R) (λ p → r ∈? R ≡ no p)
+∉→∈? {r = r} {R = R} X with r ∈? R
+... | no ¬p = _ , refl
+... | yes p = p ↯ X
