@@ -7,15 +7,35 @@ open import Agda.Builtin.List public using (List; []; _∷_)
 open import Agda.Builtin.Sigma public
 open import Agda.Builtin.Equality public
 -- open import Agda.Builtin.Bool public
-open import Relation.Nullary using (¬_)
+open import Relation.Nullary public using (¬_)
 open import Relation.Nullary.Negation using () renaming (contradiction to _↯_) -- this might be forbidden
 
 ------------------------------------------------------------------------
--- product
+-- product and sum
     
 _×_ : ∀ {ℓ 𝓂} (A : Set ℓ) (B : Set 𝓂) → Set (ℓ ⊔ 𝓂)
 A × B = Σ A (λ x → B)
 
+infixr 1 _⊎_
+
+data _⊎_ {a b} (A : Set a) (B : Set b) : Set (a ⊔ b) where
+  inj₁ : (x : A) → A ⊎ B
+  inj₂ : (y : B) → A ⊎ B
+  
+------------------------------------------------------------------------
+-- functions
+
+_∘_ : ∀ {a b c} {A : Set a} {B : A → Set b} {C : {x : A} → B x → Set c} →
+      (∀ {x} (y : B x) → C y) → (g : (x : A) → B x) →
+      ((x : A) → C (g x))
+f ∘ g = λ x → f (g x)
+
+case_return_of_ : ∀ {a b} {A : Set a} (x : A) (B : A → Set b) →
+                  ((x : A) → B x) → B x
+case x return B of f = f x
+
+case_of_ : ∀ {a b} {A : Set a}  {B : Set b} → A → (A → B) → B
+case x of f = case x return _ of f
 ------------------------------------------------------------------------
 -- bool
 {-
@@ -45,24 +65,24 @@ infix  1 begin_
 infixr 2 _≡⟨⟩_ step-≡
 infix  3 _∎
 
-begin_ : ∀ {A : Set} {x y : A}
+begin_ : ∀ {ℓ} {A : Set ℓ} {x y : A}
   → x ≡ y
     -----
   → x ≡ y
 begin x≡y  =  x≡y
 
-_≡⟨⟩_ : ∀ {A : Set} (x : A) {y : A}
+_≡⟨⟩_ : ∀ {ℓ} {A : Set ℓ} (x : A) {y : A}
   → x ≡ y
     -----
   → x ≡ y
 x ≡⟨⟩ x≡y  =  x≡y
 
-step-≡ : ∀ {A : Set} (x {y z} : A) → y ≡ z → x ≡ y → x ≡ z
+step-≡ : ∀ {ℓ} {A : Set ℓ} (x {y z} : A) → y ≡ z → x ≡ y → x ≡ z
 step-≡ x y≡z x≡y  =  trans x≡y y≡z
 
 syntax step-≡ x y≡z x≡y  =  x ≡⟨  x≡y ⟩ y≡z
 
-_∎ : ∀ {A : Set} (x : A)
+_∎ : ∀ {ℓ} {A : Set ℓ} (x : A)
     -----
   → x ≡ x
 x ∎  =  refl
@@ -175,7 +195,7 @@ _∩_ : ∀ {ℓ} {V : Set ℓ} {{_ : DecEquable V}} → List V → List V → L
 ... | no _ = L ∩ L′
 
 infixl 3 _⊆_
-_⊆_ : ∀ {A : Set} → (List A) → (List A) → Set
+_⊆_ : ∀ {ℓ} {A : Set ℓ} → (List A) → (List A) → Set ℓ
 Γ ⊆ Γ′ = ∀ {A} → A ∈ Γ → A ∈ Γ′
 
 data _≈_ : ∀ {A : Set} → (List A) → (List A) → Set (Level.suc Level.zero) where
@@ -216,6 +236,11 @@ map-∈ (there a∈L) = there (map-∈ a∈L)
 ≡-∈ : ∀ {ℓ} {A : Set ℓ} {a : A} {L M : List A} → a ∈ M → L ≡ M → a ∈ L
 ≡-∈ a∈M refl = a∈M
 
+++[]-∈ : ∀ {ℓ} {A : Set ℓ} {a : A} {L : List A} → a ∈ L ++ [] → a ∈ L
+++[]-∈ {L = x ∷ L} here = here
+++[]-∈ {L = x ∷ L} (there a∈L) = there (++[]-∈ a∈L)
+
+
 ≡-∷ : ∀ {ℓ} {A : Set ℓ} {a : A} {L M : List A} → L ≡ M → a ∷ L ≡ a ∷ M
 ≡-∷ {a = a} refl = cong (λ x → a ∷ x) refl
 
@@ -229,6 +254,13 @@ map-++ (x ∷ L) M = ≡-∷ (map-++ L M)
 ≡-++-right : ∀ {ℓ} {A : Set ℓ} {L M N : List A} → L ≡ M → L ++ N ≡ M ++ N
 ≡-++-right refl = refl
 
+{-
+dec-no : ∀ {ℓ} {A : Set ℓ} {{_ : DecEquable A}} {r : A} {R} → r ∈ R → Σ (r ∈ R) (λ p → r ∈? R ≡ yes p)
+dec-no {r = r} {R = R} X with r ∈? R
+... | yes p = _ , refl
+... | no ¬p = X ↯ ¬p
+-}
+
 ∈→∈? : ∀ {ℓ} {A : Set ℓ} {{_ : DecEquable A}} {r : A} {R} → r ∈ R → Σ (r ∈ R) (λ p → r ∈? R ≡ yes p)
 ∈→∈? {r = r} {R = R} X with r ∈? R
 ... | yes p = _ , refl
@@ -238,3 +270,23 @@ map-++ (x ∷ L) M = ≡-∷ (map-++ L M)
 ∉→∈? {r = r} {R = R} X with r ∈? R
 ... | no ¬p = _ , refl
 ... | yes p = p ↯ X
+
+∈-++⁺ˡ : ∀ {ℓ} {V : Set ℓ} {xs ys : List V} {v : V} → v ∈ xs → v ∈ xs ++ ys
+∈-++⁺ˡ here    = here
+∈-++⁺ˡ (there k) = there (∈-++⁺ˡ k)
+
+∈-++⁺ʳ : ∀ {ℓ} {V : Set ℓ} xs {ys : List V} {v : V} → v ∈ ys → v ∈ xs ++ ys
+∈-++⁺ʳ []       k = k
+∈-++⁺ʳ (x ∷ xs) k = there (∈-++⁺ʳ xs k)
+  
+∈-++⁻ : ∀ {a} {A : Set a} xs → {ys : List A} {v : A} → v ∈ xs ++ ys → v ∈ xs ⊎ v ∈ ys
+∈-++⁻ []       k       = inj₂ k
+∈-++⁻ (x ∷ xs) here    = inj₁ here
+∈-++⁻ (x ∷ xs) (there k) = case (∈-++⁻ xs k) of λ {
+  (inj₁ k′) → inj₁ (there k′) ;
+  (inj₂ k′) → inj₂ k′ }
+
+++-∈-absorb : ∀ {ℓ} {A : Set ℓ} {a : A} {R L : List A} → a ∈ (L ++ R) ++ R → a ∈ L ++ R
+++-∈-absorb {R = R} {L = L} a∈LR = case ∈-++⁻ (L ++ R) a∈LR of λ {
+  (inj₁ x) → x;
+  (inj₂ x) → ∈-++⁺ʳ L x }

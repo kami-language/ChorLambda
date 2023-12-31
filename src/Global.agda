@@ -35,6 +35,7 @@ rename f (_⊛_ {R} {S} T T₁) =  coe (rename f T ⊛ rename f T₁) (foo R S)
 rename f (_⊕_ {R} {S} T T₁) = coe (rename f T ⊕ rename f T₁) (foo R S)
 rename f (⦅⦆＠ r) = ⦅⦆＠ (f r)
 
+
 ----------------------------------------------------
 -- choreographies
 
@@ -66,7 +67,7 @@ mutual
          → Γ ⊩ᵥ T ⇒⟨ [] ⟩ (rename (λ x → r) T)
          
     tpair : {R R′ : Roles} {T : GType R} {T′ : GType R′}
-         → Γ ⊩ₘ T → Γ ⊩ₘ T′
+         → Γ ⊩ᵥ T → Γ ⊩ᵥ T′
            ----------------
          → Γ ⊩ᵥ T ⊛ T′
          
