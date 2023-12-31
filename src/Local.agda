@@ -12,7 +12,7 @@ data LType : Set where
   _⋆_ : LType  → LType  → LType
   _＋_ : LType  → LType  → LType
   ⦅⦆ : LType
-  ⊥ : LType
+  ♭ : LType
   
 
 ----------------------------------------------------
@@ -26,11 +26,11 @@ mutual
   data _⊢ᵥ_ (Γ : Context) : LType → Set where
     ntsend : ∀ {T : LType} (r : Role)
              --------------------------------------
-           → Γ ⊢ᵥ T ⟶ ⊥
+           → Γ ⊢ᵥ T ⟶ ♭
 
     ntrecv : ∀ {T : LType} (r : Role)
              --------------------------------------
-           → Γ ⊢ᵥ ⊥ ⟶ T
+           → Γ ⊢ᵥ ♭ ⟶ T
 
     ntvar : ∀ {T : LType}
           → T ∈ Γ
@@ -39,7 +39,7 @@ mutual
           
     ntunit : Γ ⊢ᵥ ⦅⦆
     
-    ntbotm : Γ ⊢ᵥ ⊥
+    ntbotm : Γ ⊢ᵥ ♭
     
     ntabs : ∀ {T T′ : LType}
           → T ∷ Γ ⊢ₘ T′
@@ -98,9 +98,9 @@ mutual
             -------------------------------------
           → Γ ⊢ₘ T′
            
-    ntapp2 : Γ ⊢ₘ ⊥ → Γ ⊢ₘ ⊥
+    ntapp2 : Γ ⊢ₘ ♭ → Γ ⊢ₘ ♭
             ----------------------
-           → Γ ⊢ₘ ⊥
+           → Γ ⊢ₘ ♭
 
     nt⊔ : ∀ {Γ′ Γ″ : Context} {T T′ : LType}
         → Γ′ ⊢ₘ T → Γ″ ⊢ₘ T′

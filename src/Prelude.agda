@@ -6,9 +6,32 @@ open import Agda.Builtin.Nat public using (Nat; zero; suc)
 open import Agda.Builtin.List public using (List; []; _∷_)
 open import Agda.Builtin.Sigma public
 open import Agda.Builtin.Equality public
--- open import Agda.Builtin.Bool public
-open import Relation.Nullary public using (¬_)
-open import Relation.Nullary.Negation using () renaming (contradiction to _↯_) -- this might be forbidden
+
+------------------------------------------------------------------------
+-- negation
+
+record Irrelevant {𝒶} (A : Set 𝒶) : Set 𝒶 where
+  constructor ⟦_⟧
+  field .irrelevant : A
+
+open Irrelevant public
+
+private
+  data Empty : Set where
+
+⊥ : Set
+⊥ = Irrelevant Empty
+
+infix 3 ¬_
+¬_ : ∀ {𝒶} → Set 𝒶 → Set 𝒶
+¬ A = A → ⊥
+
+⊥-elim : ∀ {𝒶} {A : Set 𝒶} → ⊥ → A
+⊥-elim ()
+
+_↯_ : ∀ {𝒶 ℓ : Level} {A : Set 𝒶} {W : Set ℓ} → A → ¬ A → W
+a ↯ ¬a = ⊥-elim (¬a a)
+
 
 ------------------------------------------------------------------------
 -- product and sum
@@ -150,7 +173,6 @@ infixr 5 _++_
 _++_ : ∀ {ℓ} {A : Set ℓ} → List A → List A → List A
 []       ++ ys = ys
 (x ∷ xs) ++ ys = x ∷ (xs ++ ys)
-
 
 infix 4 _∈_
 data _∈_ {x} {X : Set x} : X → List X → Set x where
