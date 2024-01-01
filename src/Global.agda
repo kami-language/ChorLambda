@@ -46,7 +46,7 @@ Context = List (SomeGType)
 mutual
 
   infix 3 _⊩ᵥ_
-  data _⊩ᵥ_ (Γ : Context) : {R : Roles} → GType R → Set where
+  data _⊩ᵥ_ (Γ : Context) : {R : Roles} → GType R → Set₁ where
 
     tabs : {R R′ : Roles} {T : GType R} {T′ : GType R′}
          → (ρ : List Role) → (R , T) ∷ Γ ⊩ₘ T′
@@ -62,8 +62,8 @@ mutual
            --------------
           → Γ ⊩ᵥ ⦅⦆＠ r
  
-    tcom : (r s : Role) → {T : GType [ s ]}
-           --------------------------------
+    tcom : (s r : Role) → {S : Roles} → {sim : S ≈ [ s ]} → {T : GType S}
+           --------------------------------------------------------
          → Γ ⊩ᵥ T ⇒⟨ [] ⟩ (rename (λ x → r) T)
          
     tpair : {R R′ : Roles} {T : GType R} {T′ : GType R′}
@@ -90,7 +90,7 @@ mutual
          → Γ ⊩ᵥ T ⊕ T′
 
   infix 3 _⊩ₘ_
-  data _⊩ₘ_ (Γ : Context) : {R : Roles} → GType R → Set where
+  data _⊩ₘ_ (Γ : Context) : {R : Roles} → GType R → Set₁ where
   
     tval : {R : Roles} {T : GType R}
          → Γ ⊩ᵥ T

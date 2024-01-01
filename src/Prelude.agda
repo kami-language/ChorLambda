@@ -32,7 +32,6 @@ infix 3 ¬_
 _↯_ : ∀ {𝒶 ℓ : Level} {A : Set 𝒶} {W : Set ℓ} → A → ¬ A → W
 a ↯ ¬a = ⊥-elim (¬a a)
 
-
 ------------------------------------------------------------------------
 -- product and sum
     
@@ -220,8 +219,13 @@ infixl 3 _⊆_
 _⊆_ : ∀ {ℓ} {A : Set ℓ} → (List A) → (List A) → Set ℓ
 Γ ⊆ Γ′ = ∀ {A} → A ∈ Γ → A ∈ Γ′
 
-data _≈_ : ∀ {A : Set} → (List A) → (List A) → Set (Level.suc Level.zero) where
-  both : ∀ {A} {L L′ : List A} → L ⊆ L′ → L′ ⊆ L → L ≈ L′
+data _≈_ : ∀ {A : Set} → (List A) → (List A) → Set where
+--  both : ∀ {A} {L L′ : List A} → L ⊆ L′ → L′ ⊆ L → L ≈ L′
+
+postulate
+  ≈∈ : ∀ {A : Set} {r : A} {R S} → r ∈ R → S ≈ R → r ∈ S
+  ≈∉ : ∀ {A : Set} {r : A} {R S} → r ∉ R → S ≈ R → r ∉ S
+  ≈map : ∀ {A B : Set} {R S : List A} → (f : A → B) → S ≈ R → map f S ≈ map f R
 
 
 keep : ∀ {A : Set} {L L′ : List A} {a : A} → L ⊆ L′ → (a ∷ L) ⊆ (a ∷ L′)

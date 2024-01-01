@@ -11,13 +11,13 @@ mutual
   π-GType r (yes p) (T ⊛ T₁) = (πT r T) ⋆ (πT r T₁)
   π-GType r (yes p) (T ⊕ T₁) = (πT r T) ＋ (πT r T₁)
   π-GType r (yes p) (⦅⦆＠ r₁) = ⦅⦆
-  π-GType r (no ¬p) T = ⊥
+  π-GType r (no ¬p) T = ♭
   
   πT : ∀ {R : Roles} → (r : Role) → (T : GType R) → LType
   πT {R} r t = π-GType r (r ∈? R) t
 
-postulate
-  project⇒ : ∀ {R R′ : Roles} {T : GType R} {T′ : GType R′} {r : Role} {ρ : Roles} → (r ∈ ((R ++ ρ) ++ R′)) → πT r (T ⇒⟨ ρ ⟩ T′) ≡ (πT r T) ⟶ (πT r T′)
+project⇒ : ∀ {R R′ : Roles} {T : GType R} {T′ : GType R′} {r : Role} {ρ : Roles} → (r ∈ ((R ++ ρ) ++ R′)) → πT r (T ⇒⟨ ρ ⟩ T′) ≡ (πT r T) ⟶ (πT r T′)
+project⇒ {R} {R′} {T} {T′} {r} {ρ} r∈RρR′ = cong (λ p → π-GType r p (T ⇒⟨ ρ ⟩ T′)) (snd ((∈→∈? r∈RρR′)))
   
 project⊕ : ∀ {R R′ : Roles} {T : GType R} {T′ : GType R′} {r : Role} → (r ∈ (R ++ R′)) → πT r (T ⊕ T′) ≡ (πT r T) ＋ (πT r T′)
 project⊕ {R} {R′} {T} {T′} {r} r∈RR′ = cong (λ p → π-GType r p (T ⊕ T′)) (snd (∈→∈? r∈RR′))
@@ -29,8 +29,8 @@ project⦅⦆ : ∀ {r s : Role} → r ∈ [ s ] → πT r (⦅⦆＠ s) ≡ ⦅
 project⦅⦆ {r} {s} r=s = cong (λ p → π-GType r p (⦅⦆＠ s)) (snd (∈→∈? r=s))
 
 
-project⊥ : ∀ {R : Roles} {T : GType R} {r : Role} → (r ∉ R) → πT r T ≡ ⊥
-project⊥ {R} {T} {r} r∉RR′ =
+project♭ : ∀ {R : Roles} {T : GType R} {r : Role} → (r ∉ R) → πT r T ≡ ♭
+project♭ {R} {T} {r} r∉RR′ =
   let
     r-no : (r ∈? R) ≡ no _
     r-no = snd (∉→∈? r∉RR′)
@@ -47,14 +47,33 @@ transp-⊢ₘ refl Ts = Ts
 
 
 bottom : ∀ {r Γ R} {T : GType R} → ¬ r ∈ R → π⋆ r Γ ⊢ᵥ πT r T 
-bottom ¬p = transp-⊢ᵥ (project⊥ ¬p) ntbotm
+bottom ¬p = transp-⊢ᵥ (project♭ ¬p) ntbotm
 
 π∈ : ∀ {R T Γ r} → (R , T) ∈ Γ → _∈_ (πT r T) (π⋆ r Γ)
 π∈ here = here
 π∈ (there x) = there (π∈ x)
 
-mutual
+terrible : ∀ {s s′ : Role} {S′ : Roles} {T : GType S′} → {S′ ≈ [ s′ ]} → (x : ¬(s ≡ s′)) → πT s′ (rename (λ _ → s) T) ≡ ♭
+terrible {s} {s′} {T = T} {S′≈[s′]} s≠s′ = cong (λ S → π-GType s′ S  (rename (λ _ → s) T)) (snd (∉→∈? (≈∉ (λ {here → refl ↯ s≠s′}) (≈map (λ _ → s) S′≈[s′]))))
 
+terrrible : ∀ {s s′ : Role} {S′ : Roles} {T : GType S′} {sim : S′ ≈ [ s′ ]} → ¬(s ≡ s′) → πT s′ (T ⇒⟨ [] ⟩ rename (λ x → s) T) ≡ (πT s′ T ⟶ ♭)
+terrrible {s} {s′} {T = T} {S′≈[s′]} s≠s′ = πT s′ (T ⇒⟨ [] ⟩ rename (λ _ → s) T)
+                            ≡⟨ project⇒ (left-∈ (left-∈ (≈∈ here S′≈[s′]))) ⟩
+                              πT s′ T ⟶ (πT s′ (rename (λ _ → s) T))
+                            ≡⟨ cong (πT s′ T ⟶_) (terrible {T = T} {S′≈[s′]} s≠s′) ⟩
+                              πT s′ T ⟶ ♭
+                            ∎
+                            
+terrrible2 : ∀ {r s s′ : Role} {S′ : Roles} {T : GType S′} {sim : S′ ≈ [ s′ ]} → ¬(s ≡ s′) → πT s (T ⇒⟨ [] ⟩ rename (λ x → s) T) ≡ (♭ ⟶ (πT s (rename (λ x → s) T)))
+terrrible2 {r} {s} {s′} {T = T} {S′≈[s′]} s≠s′ =
+                              πT s (T ⇒⟨ [] ⟩ rename (λ x → s) T)
+                            ≡⟨ project⇒ (right-∈ (map-∈ {f = (λ x → s)} (≈∈ here S′≈[s′]))) ⟩
+                              πT s T ⟶ (πT s (rename (λ x → s) T))
+                            ≡⟨ cong (_⟶ πT s (rename (λ x → s) T)) (project♭ (≈∉ (λ {here → refl ↯ s≠s′}) S′≈[s′])) ⟩
+                              (♭ ⟶ (πT s (rename (λ x → s) T)))
+                            ∎
+
+mutual
   πC : ∀ {Γ R} {T : GType R} → (r : Role) → Γ ⊩ₘ T → π⋆ r Γ ⊢ₘ (πT r T)
   πC {R = R} r t = π-Choreo r (r ∈? R) t
 
@@ -70,11 +89,11 @@ mutual
       r∉R : r ∉ R
       r∉R = left-∉ R ρ (left-∉ (R ++ ρ) R′ r∉rrr)
     
-      x⊥ = transp-⊢ₘ (project⊥ r∉rrr) (π-Choreo r (no r∉rrr) x)
-      x₁⊥ = transp-⊢ₘ (project⊥ r∉R) (π-Choreo r (no r∉R) x₁)
+      x♭ = transp-⊢ₘ (project♭ r∉rrr) (π-Choreo r (no r∉rrr) x)
+      x₁♭ = transp-⊢ₘ (project♭ r∉R) (π-Choreo r (no r∉R) x₁)
 
-      T≡⊥ = sym (project⊥ (right-∉ (R ++ ρ) R′ r∉rrr))
-    in transp-⊢ₘ T≡⊥ (ntapp2 x⊥ x₁⊥)
+      T≡♭ = sym (project♭ (right-∉ (R ++ ρ) R′ r∉rrr))
+    in transp-⊢ₘ T≡♭ (ntapp2 x♭ x₁♭)
   
   π-Choreo r r∈R (tsel x r₁ s l) with s ≟ r | r₁ ≟ r | s ≟ r₁
   ... | yes s=R | no r≠R | no s≠r = ntchor⊕ r l (πC r x)
@@ -96,10 +115,17 @@ mutual
   π-Value r (yes p) (tvar x) = transp-⊢ᵥ refl (ntvar (π∈ x))
   π-Value r (no ¬p) (tvar x) = bottom ¬p
 
+  π-Value r (yes p) (tcom s s′ {sim = sim} {T = T}) with s′ ≟ s
+  ... | yes refl =  transp-⊢ᵥ (project⇒ p) (ntabs {!!})
+  ... | no s′≠s with r ≟ s | r ≟ s′
+  ... | yes refl | _ = transp-⊢ᵥ (terrrible {sim = sim} s′≠s)  (ntsend s′)
+  ... | _ | yes refl = transp-⊢ᵥ (terrrible2 {sim = sim} s′≠s) (ntrecv s)
+  {-
   π-Value r (yes p) (tcom s s′ {T = T}) with s ≟ s′
   ... | yes p₁ = transp-⊢ᵥ {!!} (ntabs {!!})
-  π-Value r (yes here) (tcom s s′) | no s≠s′ = {!!}
-  π-Value r (yes (there p)) (tcom s s′) | no s≠s′ = {!!}
+  π-Value r (yes here) (tcom s s′) | no s≠s′ = transp-⊢ᵥ (terrrible s≠s′)  (ntsend s′)
+  π-Value r (yes (there here)) (tcom s s′) | no s≠s′ =  transp-⊢ᵥ (terrrible2 s≠s′) (ntrecv s)
+  -}
 
   π-Value r (no ¬p) (tcom r₁ s) = bottom ¬p
   
