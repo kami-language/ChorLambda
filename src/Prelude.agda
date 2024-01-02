@@ -77,6 +77,9 @@ a ≢ b = ¬ (a ≡ b)
 cong : ∀ {ℓ 𝓂} {A : Set ℓ} {B : Set 𝓂} {x y : A} (f : A → B) → x ≡ y → f x ≡ f y
 cong f refl = refl
 
+cong₂ : ∀ {ℓ 𝓂 𝓃} {A : Set ℓ} {B : Set 𝓂} {C : Set 𝓃} {x y : A} {u v : B} (f : A → B → C) → x ≡ y → u ≡ v → f x u ≡ f y v
+cong₂ f refl refl = refl
+
 sym : ∀ {ℓ} {Ξ : Set ℓ} {X Y : Ξ} (eq : X ≡ Y) → (Y ≡ X)
 sym refl = refl
 
@@ -223,16 +226,6 @@ infixl 3 _⊆_
 _⊆_ : ∀ {ℓ} {A : Set ℓ} → (List A) → (List A) → Set ℓ
 Γ ⊆ Γ′ = ∀ {A} → A ∈ Γ → A ∈ Γ′
 
-data _≈_ : ∀ {A : Set} → (List A) → (List A) → Set where
---  both : ∀ {A} {L L′ : List A} → L ⊆ L′ → L′ ⊆ L → L ≈ L′
-
-postulate
-  ≈∈ : ∀ {A : Set} {r : A} {R S} → r ∈ R → S ≈ R → r ∈ S
-  ≈∉ : ∀ {A : Set} {r : A} {R S} → r ∉ R → S ≈ R → r ∉ S
-  ≈map : ∀ {A B : Set} {R S : List A} → (f : A → B) → S ≈ R → map f S ≈ map f R
-  ≈cmap : ∀ {A B : Set} {R S : List A} {s : A} → S ≈ [ s ] → S ≡ map (λ _ → s) S
-
-
 keep : ∀ {A : Set} {L L′ : List A} {a : A} → L ⊆ L′ → (a ∷ L) ⊆ (a ∷ L′)
 keep LL = λ { here → here ; (there x) → there (LL x) }
 
@@ -321,3 +314,40 @@ dec-no {r = r} {R = R} X with r ∈? R
 ++-∈-absorb {R = R} {L = L} a∈LR = case ∈-++⁻ (L ++ R) a∈LR of λ {
   (inj₁ x) → x;
   (inj₂ x) → ∈-++⁺ʳ L x }
+
+
+------------------------------------------------------------------------
+-- list "equivalence", i.e. lists that have the same members
+
+data _≈_ : ∀ {A : Set} → (List A) → (List A) → Set₁ where
+  both : ∀ {A} {L L′ : List A} → L ⊆ L′ → L′ ⊆ L → L ≈ L′
+
+postulate
+  ≈∈ : ∀ {A : Set} {r : A} {R S} → r ∈ R → S ≈ R → r ∈ S
+  ≈∉ : ∀ {A : Set} {r : A} {R S} → r ∉ R → S ≈ R → r ∉ S
+  ≈map : ∀ {A B : Set} {R S : List A} → (f : A → B) → S ≈ R → map f S ≈ map f R
+
+lem : ∀ {A : Set} {x s : A} → x ∈ s ∷ [] → x ≡ s
+lem here = refl
+
+lem2 : ∀ {A : Set} {S : List A} {s x : A} → S ≈ [ s ] → x ∈ S → x ≡ s
+lem2 (both S⊆[s] [s]⊆S) x∈S = lem (S⊆[s] x∈S)
+
+lem3 : ∀ {A : Set} {a b c : A} {L : List A} → a ≡ b → b ≡ c → a ∈ c ∷ L
+lem3 refl refl = here
+
+≈cmap : ∀ {A : Set} {S : List A} {s : A} → S ≈ [ s ] → S ≡ map (λ _ → s) S
+≈cmap {S = []} (both S⊆[s] [s]⊆S) = refl
+≈cmap {S = x ∷ []} sim = cong (_∷ []) (lem2 sim here)
+≈cmap {S = x ∷ (y ∷ S)} {s} (both S⊆[s] [s]⊆S) = begin
+                x ∷ (y ∷ S)
+              ≡⟨ cong (λ f → f ∷ (y ∷ S)) (lem (S⊆[s] here))⟩
+                s ∷ (y ∷ S)
+              ≡⟨  cong (λ F → s ∷ F) (≈cmap (both
+                         (λ a∈S → S⊆[s] (∷-∈ (y ∷ S) a∈S))
+                         (λ a∈[s] → let
+                           a≡s = lem2 (both (λ x → x) (λ x → x)) a∈[s]
+                           y≡s = lem2 (both S⊆[s] [s]⊆S) (there here)
+                         in lem3 a≡s (sym y≡s)))) ⟩
+                s ∷ map (λ _ → s) (y ∷ S)
+              ∎
