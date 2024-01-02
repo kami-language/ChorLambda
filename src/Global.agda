@@ -11,7 +11,7 @@ data GType : (ℝ : Roles) → Set where
   _⇒⟨_⟩_ : ∀ {R S} → GType R → (ρ : List Role) → GType S → GType ((R ++ ρ) ++ S)
   _⊛_ : ∀ {R S} → GType R → GType S → GType (R ++ S)
   _⊕_ : ∀ {R S} → GType R → GType S → GType (R ++ S)
-  ⦅⦆＠ : (r : Role) → GType [ r ]
+  ◎＠ : (r : Role) → GType [ r ]
   
 
 ----------------------------------------------------
@@ -33,7 +33,7 @@ rename f (_⇒⟨_⟩_ {R} {S} T ρ T₁) =
   in coe (coe (rename f T ⇒⟨ map f ρ ⟩ rename f T₁) fooo) (foo (R ++ ρ) S)
 rename f (_⊛_ {R} {S} T T₁) =  coe (rename f T ⊛ rename f T₁) (foo R S)
 rename f (_⊕_ {R} {S} T T₁) = coe (rename f T ⊕ rename f T₁) (foo R S)
-rename f (⦅⦆＠ r) = ⦅⦆＠ (f r)
+rename f (◎＠ r) = ◎＠ (f r)
 
 
 ----------------------------------------------------
@@ -60,7 +60,7 @@ mutual
  
     tunit : (r : Role)
            --------------
-          → Γ ⊩ᵥ ⦅⦆＠ r
+          → Γ ⊩ᵥ ◎＠ r
  
     tcom : (s r : Role) → {S : Roles} → {sim : S ≈ [ s ]} → {T : GType S}
            --------------------------------------------------------

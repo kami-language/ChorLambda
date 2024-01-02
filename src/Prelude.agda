@@ -70,6 +70,10 @@ if false then t else f = f
 ------------------------------------------------------------------------
 -- equality stuff
 
+infix 4 _≢_
+_≢_ : ∀ {ℓ} {A : Set ℓ} (a b : A) → Set ℓ
+a ≢ b = ¬ (a ≡ b)
+
 cong : ∀ {ℓ 𝓂} {A : Set ℓ} {B : Set 𝓂} {x y : A} (f : A → B) → x ≡ y → f x ≡ f y
 cong f refl = refl
 
@@ -226,6 +230,7 @@ postulate
   ≈∈ : ∀ {A : Set} {r : A} {R S} → r ∈ R → S ≈ R → r ∈ S
   ≈∉ : ∀ {A : Set} {r : A} {R S} → r ∉ R → S ≈ R → r ∉ S
   ≈map : ∀ {A B : Set} {R S : List A} → (f : A → B) → S ≈ R → map f S ≈ map f R
+  ≈cmap : ∀ {A B : Set} {R S : List A} {s : A} → S ≈ [ s ] → S ≡ map (λ _ → s) S
 
 
 keep : ∀ {A : Set} {L L′ : List A} {a : A} → L ⊆ L′ → (a ∷ L) ⊆ (a ∷ L′)
