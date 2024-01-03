@@ -1,3 +1,5 @@
+{-# OPTIONS --rewriting #-}
+
 module Base where
 
 open import Prelude

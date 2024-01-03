@@ -1,3 +1,5 @@
+{-# OPTIONS --rewriting #-}
+
 module Global where
 
 open import Prelude
@@ -17,24 +19,11 @@ data GType : (ℝ : Roles) → Set where
 ----------------------------------------------------
 -- role renaming
 
-{-
-renameSingle : ∀ {r} → (s : Role) → GType [ r ] → GType [ s ]
-renameSingle s T = {!!}
--}
-
-foo : ∀ {A : Set} {f : A → Role} (R S : List A) → (GType (map f R ++ map f S)) ≡ (GType (map f (R ++ S)))
-foo R S = cong GType (map-++ R S)
-
--- TODO make this pretty
 rename : ∀ {R} → (f : Nat → Nat) → GType R → GType (map f R)
-rename f (_⇒⟨_⟩_ {R} {S} T ρ T₁) =
-  let
-    fooo = cong GType (≡-++-right (map-++ R ρ))
-  in coe (coe (rename f T ⇒⟨ map f ρ ⟩ rename f T₁) fooo) (foo (R ++ ρ) S)
-rename f (_⊛_ {R} {S} T T₁) =  coe (rename f T ⊛ rename f T₁) (foo R S)
-rename f (_⊕_ {R} {S} T T₁) = coe (rename f T ⊕ rename f T₁) (foo R S)
+rename f (_⇒⟨_⟩_ T ρ T₁) = rename f T ⇒⟨ map f ρ ⟩ rename f T₁
+rename f (_⊛_ T T₁) = rename f T ⊛ rename f T₁
+rename f (_⊕_ T T₁) = rename f T ⊕ rename f T₁
 rename f (◎＠ r) = ◎＠ (f r)
-
 
 ----------------------------------------------------
 -- choreographies

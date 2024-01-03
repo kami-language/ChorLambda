@@ -1,3 +1,5 @@
+{-# OPTIONS --rewriting #-}
+
 module EndpointProjection where
 
 open import Prelude
@@ -55,48 +57,79 @@ bottom ¬p = transp-⊢ᵥ (project∅ ¬p) ntbotm
 terrible : ∀ {s s′ : Role} {S′ : Roles} {T : GType S′} → {S′ ≈ [ s′ ]} → s ≢ s′ → πT s′ (rename (λ _ → s) T) ≡ ∅
 terrible {s} {s′} {T = T} {S′≈[s′]} s≢s′ = cong (λ S → π-GType s′ S  (rename (λ _ → s) T)) (snd (∉→∈? (≈∉ (λ {here → refl ↯ s≢s′}) (≈map (λ _ → s) S′≈[s′]))))
 
-{-
-terible : ∀ {s : Role} {S : Roles} {T : GType S} → {S≈[s] : S ≈ [ s ]} → rename (λ _ → s) T ≡ coe T (cong GType (≈cmap S≈[s]))
-terible = {!!}
+lem5 : ∀ {s S} {T : GType S} (p : S ≈ [ s ]) → T ≅ rename (λ _ → s) T
+lem5 {s} {S = M} {T = _⇒⟨_⟩_ {R} {S} T ρ T₁} sim = let
+    (Rρ⊆M , S⊆M) = ⊆-++ {M = M} {L = (R ++ ρ)} refl
+    (R⊆Rρ , ρ⊆Rρ) = ⊆-++ {M = (R ++ ρ)} {L = R} refl
+    R⊆M = ⊆-++⁺ˡ R⊆Rρ
+    ρ⊆M = ⊆-++⁺ˡ ρ⊆Rρ
+    conR = ≈const⊆ sim R⊆M
+    conρ = ≈const⊆ sim ρ⊆M
+    conS = ≈const⊆ sim S⊆M
+  in begin (T ⇒⟨ ρ ⟩ T₁)
+     ≅⟨ icong (λ _ → List Nat) (≈cmap conρ) (T ⇒⟨_⟩ T₁) (≡-to-≅ (≈cmap conρ)) ⟩
+       T ⇒⟨ map (λ _ → s) ρ ⟩ T₁
+     ≅⟨ icong (λ R → GType R) (≈cmap conR) (_⇒⟨ map (λ _ → s) ρ ⟩ T₁) (lem5 {T = T} conR) ⟩
+       (rename (λ _ → s) T ⇒⟨ map (λ _ → s) ρ ⟩ T₁)
+     ≅⟨ icong (λ R → GType R) (≈cmap conS) (rename (λ _ → s) T ⇒⟨ map (λ _ → s) ρ ⟩_) (lem5 {T = T₁} conS) ⟩
+       (rename (λ _ → s) T ⇒⟨ map (λ _ → s) ρ ⟩ rename (λ _ → s) T₁) ∎
+  where open ≅-Reasoning
+     
+
+lem5 {s} {S = M} {T = _⊛_ {R} {S} T T₁} sim = let
+    (left , right) = ⊆-++ {M = M} {L = R} refl
+    conl = lem5 {T = T} (≈const⊆ sim left)
+    conr = lem5 {T = T₁} (≈const⊆ sim right)
+  in begin (T ⊛ T₁)
+     ≅⟨ icong (λ R → GType R) (≈cmap (≈const⊆ sim left)) (_⊛ T₁) conl ⟩
+       (rename (λ _ → s) T) ⊛ T₁
+     ≅⟨ icong (λ R → GType R) (≈cmap (≈const⊆ sim right)) ((rename (λ _ → s) T) ⊛_) conr ⟩
+       (rename (λ _ → s) T) ⊛ (rename (λ _ → s) T₁) ∎
+   where open ≅-Reasoning
+
+lem5 {s} {S = M} {T = _⊕_ {R} {S} T T₁} sim =
+  let
+    (left , right) = ⊆-++ {M = M} {L = R} refl
+    conl = lem5 {T = T} (≈const⊆ sim left)
+    conr = lem5 {T = T₁} (≈const⊆ sim right)
+  in begin (T ⊕ T₁)
+     ≅⟨ icong (λ R → GType R) (≈cmap (≈const⊆ sim left)) (_⊕ T₁) conl ⟩
+       (rename (λ _ → s) T) ⊕ T₁
+     ≅⟨ icong (λ R → GType R) (≈cmap (≈const⊆ sim right)) ((rename (λ _ → s) T) ⊕_) conr ⟩
+       (rename (λ _ → s) T) ⊕ (rename (λ _ → s) T₁) ∎
+  where open ≅-Reasoning
+  
+lem5 {s} {T = ◎＠ r} (both S⊆[s] [s]⊆S) = icong (λ _ → Nat) (≈cmap (both S⊆[s] [s]⊆S)) ◎＠ (≡-to-≅ (∈-singleton (S⊆[s] here)))
 
 
-terrible2 : ∀ {r s : Role} {S : Roles} {T : GType S} → {S ≈ [ s ]} → r ∈ S → πT r (rename (λ _ → s) T) ≡ πT r T
-terrible2 {r} {s} {T = T} {S≈[s]} r∈S = cong (πT r) terible -- πT r (rename (λ _ → s) T) ≡⟨ {!!} ⟩ πT r T ∎
--}
+lem6 : ∀ {r s : Nat} {S : List Nat} (p : S ≈ [ s ]) → r ∈? S ≅ r ∈? map (λ _ → s) S
+lem6 {r} p = ≅cong (r ∈?_) (≡-to-≅ (≈cmap p))
 
-terible : ∀ {s S T} (S≈[s] : S ≈ [ s ]) → rename (λ _ → s) T ≡ coe T (cong GType (≈cmap S≈[s]))
-terible S≈[s] = {!!}
+
+lem7 : ∀ {r s S} {T : GType S} (p : S ≈ [ s ]) → π-GType r (r ∈? S) T ≅ π-GType r (r ∈? map (λ _ → s) S) (rename (λ _ → s) T)
+lem7 {r} p = icong₂ (λ R → Dec (r ∈ R)) (≈cmap p) (π-GType r) (lem6 p) (lem5 p)
+
 
 terrible2 : ∀ {r s : Role} {S : Roles} {T : GType S} → {sim : S ≈ [ s ]} → r ∈ S → πT r (rename (λ _ → s) T) ≡ πT r T
-terrible2 {r} {s} {S} {T} {S≈[s]} r∈S =
-  begin
-    πT r (rename (λ _ → s) T)
-  ≡⟨⟩
-    π-GType r (r ∈? map (λ _ → s) S) (rename (λ _ → s) T)
-  ≡⟨ cong (π-GType r _) (terible S≈[s]) ⟩
-    π-GType r (r ∈? map (λ _ → s) S) (coe T (cong GType (≈cmap S≈[s])))
-  ≡⟨ {!!} ⟩
-    π-GType r (r ∈? S) T
-  ≡⟨⟩
-    πT r T
-  ∎
+terrible2 {r} {s} {S} {T} {S≈[s]} r∈S = sym (≅-to-≡ (lem7 S≈[s]))
 
-terrrible : ∀ {s s′ : Role} {S′ : Roles} {T : GType S′} {sim : S′ ≈ [ s′ ]} → s ≢ s′ → πT s′ (T ⇒⟨ [] ⟩ rename (λ x → s) T) ≡ (πT s′ T ⟶ ∅)
-terrrible {s} {s′} {T = T} {S′≈[s′]} s≢s′ = πT s′ (T ⇒⟨ [] ⟩ rename (λ _ → s) T)
+
+projectSend : ∀ {s s′ : Role} {S′ : Roles} {T : GType S′} {sim : S′ ≈ [ s′ ]} → s ≢ s′ → πT s′ (T ⇒⟨ [] ⟩ rename (λ x → s) T) ≡ (πT s′ T ⟶ ∅)
+projectSend {s} {s′} {T = T} {S′≈[s′]} s≢s′ = πT s′ (T ⇒⟨ [] ⟩ rename (λ _ → s) T)
                             ≡⟨ project⇒ (left-∈ (left-∈ (≈∈ here S′≈[s′]))) ⟩
                               πT s′ T ⟶ (πT s′ (rename (λ _ → s) T))
                             ≡⟨ cong (πT s′ T ⟶_) (terrible {T = T} {S′≈[s′]} s≢s′) ⟩
                               πT s′ T ⟶ ∅
-                            ∎
+                            ∎ where open ≡-Reasoning
                             
-terrrible2 : ∀ {s s′ : Role} {S′ : Roles} {T : GType S′} {sim : S′ ≈ [ s′ ]} → s ≢ s′ → πT s (T ⇒⟨ [] ⟩ rename (λ x → s) T) ≡ (∅ ⟶ (πT s (rename (λ x → s) T)))
-terrrible2 {s} {s′} {T = T} {S′≈[s′]} s≢s′ =
+projectRecv : ∀ {s s′ : Role} {S′ : Roles} {T : GType S′} {sim : S′ ≈ [ s′ ]} → s ≢ s′ → πT s (T ⇒⟨ [] ⟩ rename (λ x → s) T) ≡ (∅ ⟶ (πT s (rename (λ x → s) T)))
+projectRecv {s} {s′} {T = T} {S′≈[s′]} s≢s′ =
                               πT s (T ⇒⟨ [] ⟩ rename (λ x → s) T)
                             ≡⟨ project⇒ (right-∈ (map-∈ {f = (λ x → s)} (≈∈ here S′≈[s′]))) ⟩
                               πT s T ⟶ (πT s (rename (λ x → s) T))
                             ≡⟨ cong (_⟶ πT s (rename (λ x → s) T)) (project∅ (≈∉ (λ {here → refl ↯ s≢s′}) S′≈[s′])) ⟩
                               (∅ ⟶ (πT s (rename (λ x → s) T)))
-                            ∎
+                            ∎ where open ≡-Reasoning
                             
 here≡ : ∀ {x} {X : Set x} {A B : X} {L : List X} → A ≡ B → A ∈ (B ∷ L)
 here≡ refl = here
@@ -146,8 +179,11 @@ mutual
   π-Value r (yes p) (tcom s s′ {S} {sim = sim} {T = T}) with s′ ≟ s
   ... | yes refl = transp-⊢ᵥ (project⇒ p) (ntabs (ntval (ntvar (here≡ (terrible2 {sim = sim} (case (∈-++⁻ (S ++ []) p) of λ {(inj₁ left) → ++[]-∈ left; (inj₂ right) → ≡-∈ right (≈cmap sim)}))))))
   ... | no s′≠s with r ≟ s | r ≟ s′
-  ... | yes refl | _ = transp-⊢ᵥ (terrrible {sim = sim} s′≠s) (ntsend s′)
-  ... | _ | yes refl = transp-⊢ᵥ (terrrible2 {sim = sim} s′≠s) (ntrecv s)
+  ... | yes refl | _ = transp-⊢ᵥ (projectSend {sim = sim} s′≠s) (ntsend s′)
+  ... | _ | yes refl = transp-⊢ᵥ (projectRecv {sim = sim} s′≠s) (ntrecv s)
+  ... | no r≠s | no s≠s′ = case (∈-++⁻ (S ++ []) p) of λ {
+                             (inj₁ q) → {!∈-++⁻ q!};
+                             (inj₂ q) → {!!}}
 
   π-Value r (no ¬p) (tcom r₁ s) = bottom ¬p
   
@@ -163,7 +199,7 @@ mutual
           )) ⟩
           (((πT r T) ⋆ (πT r T′)) ⟶ (πT r T))
         ∎
-    in transp-⊢ᵥ πproj ntproj1
+    in transp-⊢ᵥ πproj ntproj1  where open ≡-Reasoning
   π-Value r (no ¬p) tproj1 = bottom ¬p
   
   π-Value r (yes p) (tproj2 {R} {R′} {T} {T′}) =
@@ -179,7 +215,7 @@ mutual
           )) ⟩
           (((πT r T) ⋆ (πT r T′)) ⟶ (πT r T′))
         ∎
-    in transp-⊢ᵥ πproj ntproj2
+    in transp-⊢ᵥ πproj ntproj2 where open ≡-Reasoning
   π-Value r (no ¬p) tproj2 = bottom ¬p
   
   π-Value r (yes p) (tabs ρ x) = transp-⊢ᵥ (project⇒ p) (ntabs (πC r x))

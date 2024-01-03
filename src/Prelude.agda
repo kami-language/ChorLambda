@@ -1,3 +1,5 @@
+{-# OPTIONS --rewriting #-}
+
 module Prelude where
 
 open import Level using (Level)
@@ -6,6 +8,9 @@ open import Agda.Builtin.Nat public using (Nat; zero; suc)
 open import Agda.Builtin.List public using (List; []; _∷_)
 open import Agda.Builtin.Sigma public
 open import Agda.Builtin.Equality public
+open import Agda.Builtin.Equality.Rewrite
+import Relation.Binary.HeterogeneousEquality as H
+open H public using (_≅_; ≡-to-≅; ≅-to-≡; icong; icong₂; ≅-to-type-≡; module ≅-Reasoning) renaming (cong to ≅cong; cong₂ to ≅cong₂)
 
 ------------------------------------------------------------------------
 -- negation
@@ -89,34 +94,36 @@ coe x refl = x
 trans : ∀ {ℓ} {A : Set ℓ} {X Y Z : A} (eq : X ≡ Y) (eq₁ : Y ≡ Z) → X ≡ Z
 trans refl refl = refl
 
+module ≡-Reasoning where
 
-infix  1 begin_
-infixr 2 _≡⟨⟩_ step-≡
-infix  3 _∎
+  infixr 1 begin_
+  infixr 2 _≡⟨⟩_ step-≡
+  infix  3 _∎
 
-begin_ : ∀ {ℓ} {A : Set ℓ} {x y : A}
-  → x ≡ y
-    -----
-  → x ≡ y
-begin x≡y  =  x≡y
+  begin_ : ∀ {ℓ} {A : Set ℓ} {x y : A}
+    → x ≡ y
+      -----
+    → x ≡ y
+  begin x≡y  =  x≡y
 
-_≡⟨⟩_ : ∀ {ℓ} {A : Set ℓ} (x : A) {y : A}
-  → x ≡ y
-    -----
-  → x ≡ y
-x ≡⟨⟩ x≡y  =  x≡y
+  _≡⟨⟩_ : ∀ {ℓ} {A : Set ℓ} (x : A) {y : A}
+    → x ≡ y
+      -----
+    → x ≡ y
+  x ≡⟨⟩ x≡y  =  x≡y
 
-step-≡ : ∀ {ℓ} {A : Set ℓ} (x {y z} : A) → y ≡ z → x ≡ y → x ≡ z
-step-≡ x y≡z x≡y  =  trans x≡y y≡z
+  step-≡ : ∀ {ℓ} {A : Set ℓ} (x {y z} : A) → y ≡ z → x ≡ y → x ≡ z
+  step-≡ x y≡z x≡y  =  trans x≡y y≡z
 
-syntax step-≡ x y≡z x≡y  =  x ≡⟨  x≡y ⟩ y≡z
+  syntax step-≡ x y≡z x≡y  =  x ≡⟨  x≡y ⟩ y≡z
 
-_∎ : ∀ {ℓ} {A : Set ℓ} (x : A)
-    -----
-  → x ≡ x
-x ∎  =  refl
+  _∎ : ∀ {ℓ} {A : Set ℓ} (x : A)
+      -----
+    → x ≡ x
+  x ∎  =  refl
 
-------------------------------------------------------------------------
+
+-----------------------------------------------------------------------
 -- decidability stuff
 
 data Dec {ℓ} (A : Set ℓ) : Set ℓ where
@@ -260,6 +267,9 @@ map-∈ (there a∈L) = there (map-∈ a∈L)
 ≡-∈ : ∀ {ℓ} {A : Set ℓ} {a : A} {L M : List A} → a ∈ M → L ≡ M → a ∈ L
 ≡-∈ a∈M refl = a∈M
 
+∈-singleton : ∀ {A : Set} {a s : A} → a ∈ s ∷ [] → a ≡ s
+∈-singleton here = refl
+
 ++[]-∈ : ∀ {ℓ} {A : Set ℓ} {a : A} {L : List A} → a ∈ L ++ [] → a ∈ L
 ++[]-∈ {L = x ∷ L} here = here
 ++[]-∈ {L = x ∷ L} (there a∈L) = there (++[]-∈ a∈L)
@@ -271,6 +281,8 @@ map-∈ (there a∈L) = there (map-∈ a∈L)
 map-++ : ∀ {ℓ} {A B : Set ℓ} (L M : List A) {f : A → B} → map f L ++ map f M ≡ map f (L ++ M) 
 map-++ [] M = refl
 map-++ (x ∷ L) M = ≡-∷ (map-++ L M)
+
+{-# REWRITE map-++ #-}
 
 ≡-++ : ∀ {ℓ} {A : Set ℓ} {L M N : List A} → L ≡ M → N ++ L ≡ N ++ M
 ≡-++ refl = refl
@@ -316,6 +328,14 @@ dec-no {r = r} {R = R} X with r ∈? R
   (inj₂ x) → ∈-++⁺ʳ L x }
 
 
+⊆-++ : ∀ {ℓ} {A : Set ℓ} {M L R : List A} → M ≡ (L ++ R) → (L ⊆ M) × (R ⊆ M)
+fst (⊆-++ refl) a∈L = ∈-++⁺ˡ a∈L
+snd (⊆-++ {L = L} refl) a∈M = ∈-++⁺ʳ L a∈M
+
+⊆-++⁺ˡ : ∀ {ℓ} {A : Set ℓ} {M L R : List A} → L ⊆ M → L ⊆ M ++ R
+⊆-++⁺ˡ L⊆M a∈L = ∈-++⁺ˡ (L⊆M a∈L)
+
+
 ------------------------------------------------------------------------
 -- list "equivalence", i.e. lists that have the same members
 
@@ -326,6 +346,7 @@ postulate
   ≈∈ : ∀ {A : Set} {r : A} {R S} → r ∈ R → S ≈ R → r ∈ S
   ≈∉ : ∀ {A : Set} {r : A} {R S} → r ∉ R → S ≈ R → r ∉ S
   ≈map : ∀ {A B : Set} {R S : List A} → (f : A → B) → S ≈ R → map f S ≈ map f R
+  ≈const⊆ : ∀ {A : Set} {S S′ : List A} {s : A} → S ≈ [ s ] → S′ ⊆ S → S′ ≈ [ s ]
 
 lem : ∀ {A : Set} {x s : A} → x ∈ s ∷ [] → x ≡ s
 lem here = refl
@@ -351,3 +372,4 @@ lem3 refl refl = here
                          in lem3 a≡s (sym y≡s)))) ⟩
                 s ∷ map (λ _ → s) (y ∷ S)
               ∎
+             where open ≡-Reasoning
