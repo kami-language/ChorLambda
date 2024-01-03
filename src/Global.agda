@@ -25,6 +25,9 @@ rename f (_⊛_ T T₁) = rename f T ⊛ rename f T₁
 rename f (_⊕_ T T₁) = rename f T ⊕ rename f T₁
 rename f (◎＠ r) = ◎＠ (f r)
 
+renameAll : ∀ {R} → (s : Role) → (T : GType R) → GType (map (λ _ → s) R)
+renameAll s T = rename (λ _ → s) T
+
 ----------------------------------------------------
 -- choreographies
 
@@ -53,7 +56,7 @@ mutual
  
     tcom : (s r : Role) → {S : Roles} → {sim : S ≈ [ s ]} → {T : GType S}
            --------------------------------------------------------
-         → Γ ⊩ᵥ T ⇒⟨ [] ⟩ (rename (λ x → r) T)
+         → Γ ⊩ᵥ T ⇒⟨ [] ⟩ (renameAll r T)
          
     tpair : {R R′ : Roles} {T : GType R} {T′ : GType R′}
          → Γ ⊩ᵥ T → Γ ⊩ᵥ T′
