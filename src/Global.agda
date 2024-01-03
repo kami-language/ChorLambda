@@ -4,29 +4,8 @@ module Global where
 
 open import Prelude
 open import Base
-
-----------------------------------------------------
--- global types
-
-
-data GType : (ℝ : Roles) → Set where
-  _⇒⟨_⟩_ : ∀ {R S} → GType R → (ρ : List Role) → GType S → GType ((R ++ ρ) ++ S)
-  _⊛_ : ∀ {R S} → GType R → GType S → GType (R ++ S)
-  _⊕_ : ∀ {R S} → GType R → GType S → GType (R ++ S)
-  ◎＠ : (r : Role) → GType [ r ]
-  
-
-----------------------------------------------------
--- role renaming
-
-rename : ∀ {R} → (f : Nat → Nat) → GType R → GType (map f R)
-rename f (_⇒⟨_⟩_ T ρ T₁) = rename f T ⇒⟨ map f ρ ⟩ rename f T₁
-rename f (_⊛_ T T₁) = rename f T ⊛ rename f T₁
-rename f (_⊕_ T T₁) = rename f T ⊕ rename f T₁
-rename f (◎＠ r) = ◎＠ (f r)
-
-renameAll : ∀ {R} → (s : Role) → (T : GType R) → GType (map (λ _ → s) R)
-renameAll s T = rename (λ _ → s) T
+open import Types
+open import Renaming
 
 ----------------------------------------------------
 -- choreographies

@@ -4,8 +4,13 @@ module EndpointProjection where
 
 open import Prelude
 open import Base
+open import Types
+open import Renaming
 open import Global
 open import Local
+
+------------------------------------------------------------------------
+-- Projecting Types
 
 mutual
   π-GType : ∀ {R : Roles} → (r : Role) → Dec (r ∈ R) → (T : GType R) → LType
@@ -18,106 +23,53 @@ mutual
   πT : ∀ {R : Roles} → (r : Role) → (T : GType R) → LType
   πT {R} r t = π-GType r (r ∈? R) t
 
-project⇒ : ∀ {R R′ : Roles} {T : GType R} {T′ : GType R′} {r : Role} {ρ : Roles} → (r ∈ ((R ++ ρ) ++ R′)) → πT r (T ⇒⟨ ρ ⟩ T′) ≡ (πT r T) ⟶ (πT r T′)
-project⇒ {R} {R′} {T} {T′} {r} {ρ} r∈RρR′ = cong (λ p → π-GType r p (T ⇒⟨ ρ ⟩ T′)) (snd ((∈→∈? r∈RρR′)))
-  
-project⊕ : ∀ {R R′ : Roles} {T : GType R} {T′ : GType R′} {r : Role} → (r ∈ (R ++ R′)) → πT r (T ⊕ T′) ≡ (πT r T) ＋ (πT r T′)
-project⊕ {R} {R′} {T} {T′} {r} r∈RR′ = cong (λ p → π-GType r p (T ⊕ T′)) (snd (∈→∈? r∈RR′))
-
-project⊛ : ∀ {R R′ : Roles} {T : GType R} {T′ : GType R′} {r : Role} → (r ∈ (R ++ R′)) → πT r (T ⊛ T′) ≡ (πT r T) ⋆ (πT r T′)
-project⊛ {R} {R′} {T} {T′} {r} r∈RR′ = cong (λ p → π-GType r p (T ⊛ T′)) (snd (∈→∈? r∈RR′))
-
-project○ : ∀ {r s : Role} → r ∈ [ s ] → πT r (◎＠ s) ≡ ○
-project○ {r} {s} r=s = cong (λ p → π-GType r p (◎＠ s)) (snd (∈→∈? r=s))
-
-project∅ : ∀ {R : Roles} {T : GType R} {r : Role} → (r ∉ R) → πT r T ≡ ∅
-project∅ {R} {T} {r} r∉RR′ =
-  let
-    r-no : (r ∈? R) ≡ no _
-    r-no = snd (∉→∈? r∉RR′)
-  in cong (λ rr → π-GType r rr T) r-no
-  
-transp-⊢ᵥ : ∀ {T T′ : LType} {Γ} -> T′ ≡ T -> Γ ⊢ᵥ T -> Γ ⊢ᵥ T′
-transp-⊢ᵥ refl Ts = Ts
-
-transp-⊢ₘ : ∀ {T T′ : LType} {Γ} -> T ≡ T′ -> Γ ⊢ₘ T -> Γ ⊢ₘ T′
-transp-⊢ₘ refl Ts = Ts
-
 π⋆ : Role → Global.Context → Local.Context
 π⋆ r = map (λ { (_ , t) → πT r t })
-
-bottom : ∀ {r Γ R} {T : GType R} → ¬ r ∈ R → π⋆ r Γ ⊢ᵥ πT r T 
-bottom ¬p = transp-⊢ᵥ (project∅ ¬p) ntbotm
 
 π∈ : ∀ {R T Γ r} → (R , T) ∈ Γ → _∈_ (πT r T) (π⋆ r Γ)
 π∈ here = here
 π∈ (there x) = there (π∈ x)
 
-terrible : ∀ {s s′ : Role} {S′ : Roles} {T : GType S′} → {S′ ≈ [ s′ ]} → s ≢ s′ → πT s′ (rename (λ _ → s) T) ≡ ∅
-terrible {s} {s′} {T = T} {S′≈[s′]} s≢s′ = cong (λ S → π-GType s′ S (renameAll s T)) (snd (∉→∈? (≈∉ (λ {here → refl ↯ s≢s′}) (≈map (λ _ → s) S′≈[s′]))))
+------------------------------------------------------------------------
+-- properties of projection to participant roles
 
-lem5 : ∀ {s S} {T : GType S} (p : S ≈ [ s ]) → T ≅ renameAll s T
-lem5 {s} {S = M} {T = _⇒⟨_⟩_ {R} {S} T ρ T₁} sim = let
-    (Rρ⊆M , S⊆M) = ⊆-++ {M = M} {L = (R ++ ρ)} refl
-    (R⊆Rρ , ρ⊆Rρ) = ⊆-++ {M = (R ++ ρ)} {L = R} refl
-    R⊆M = ⊆-++⁺ˡ R⊆Rρ
-    ρ⊆M = ⊆-++⁺ˡ ρ⊆Rρ
-    conR = ≈const⊆ sim R⊆M
-    conρ = ≈const⊆ sim ρ⊆M
-    conS = ≈const⊆ sim S⊆M
-  in begin (T ⇒⟨ ρ ⟩ T₁)
-     ≅⟨ icong (λ _ → List Nat) (≈cmap conρ) (T ⇒⟨_⟩ T₁) (≡-to-≅ (≈cmap conρ)) ⟩
-       T ⇒⟨ map (λ _ → s) ρ ⟩ T₁
-     ≅⟨ icong GType (≈cmap conR) (_⇒⟨ map (λ _ → s) ρ ⟩ T₁) (lem5 {T = T} conR) ⟩
-       renameAll s T ⇒⟨ map (λ _ → s) ρ ⟩ T₁
-     ≅⟨ icong GType (≈cmap conS) (renameAll s T ⇒⟨ map (λ _ → s) ρ ⟩_) (lem5 {T = T₁} conS) ⟩
-       renameAll s T ⇒⟨ map (λ _ → s) ρ ⟩ renameAll s T₁ ∎
-  where open ≅-Reasoning
-     
-
-lem5 {s} {S = M} {T = _⊛_ {R} {S} T T₁} sim = let
-    (left , right) = ⊆-++ {M = M} {L = R} refl
-    conl = lem5 {T = T} (≈const⊆ sim left)
-    conr = lem5 {T = T₁} (≈const⊆ sim right)
-  in begin T ⊛ T₁
-     ≅⟨ icong GType (≈cmap (≈const⊆ sim left)) (_⊛ T₁) conl ⟩
-       renameAll s T ⊛ T₁
-     ≅⟨ icong GType (≈cmap (≈const⊆ sim right)) (renameAll s T ⊛_) conr ⟩
-       renameAll s T ⊛ renameAll s T₁ ∎
-   where open ≅-Reasoning
-
-lem5 {s} {S = M} {T = _⊕_ {R} {S} T T₁} sim =
-  let
-    (left , right) = ⊆-++ {M = M} {L = R} refl
-    conl = lem5 {T = T} (≈const⊆ sim left)
-    conr = lem5 {T = T₁} (≈const⊆ sim right)
-  in begin T ⊕ T₁
-     ≅⟨ icong GType (≈cmap (≈const⊆ sim left)) (_⊕ T₁) conl ⟩
-       renameAll s T ⊕ T₁
-     ≅⟨ icong GType (≈cmap (≈const⊆ sim right)) (renameAll s T ⊕_) conr ⟩
-       renameAll s T ⊕ renameAll s T₁ ∎
-  where open ≅-Reasoning
+project⇒ : ∀ {r ρ R R′} {T : GType R} {T′ : GType R′} → (r ∈ (R ++ ρ) ++ R′) → πT r (T ⇒⟨ ρ ⟩ T′) ≡ πT r T ⟶ πT r T′
+project⇒ {r} {ρ} {T = T} {T′} r∈RρR′ = cong (λ p → π-GType r p (T ⇒⟨ ρ ⟩ T′)) (snd (∈→∈? r∈RρR′))
   
-lem5 {s} {T = ◎＠ r} (both S⊆[s] [s]⊆S) = icong (λ _ → Nat) (≈cmap (both S⊆[s] [s]⊆S)) ◎＠ (≡-to-≅ (∈-singleton (S⊆[s] here)))
+project⊕ : ∀ {r R R′} {T : GType R} {T′ : GType R′} → (r ∈ R ++ R′) → πT r (T ⊕ T′) ≡ πT r T ＋ πT r T′
+project⊕ {r} {T = T} {T′} r∈RR′ = cong (λ p → π-GType r p (T ⊕ T′)) (snd (∈→∈? r∈RR′))
 
+project⊛ : ∀ {r R R′} {T : GType R} {T′ : GType R′} → (r ∈ R ++ R′) → πT r (T ⊛ T′) ≡ πT r T ⋆ πT r T′
+project⊛ {r} {T = T} {T′} r∈RR′ = cong (λ p → π-GType r p (T ⊛ T′)) (snd (∈→∈? r∈RR′))
 
-lem6 : ∀ {r s : Nat} {S : List Nat} (p : S ≈ [ s ]) → r ∈? S ≅ r ∈? map (λ _ → s) S
-lem6 {r} p = ≅cong (r ∈?_) (≡-to-≅ (≈cmap p))
+project○ : ∀ {r s} → r ∈ [ s ] → πT r (◎＠ s) ≡ ○
+project○ {r} {s} r=s = cong (λ p → π-GType r p (◎＠ s)) (snd (∈→∈? r=s))
+
+project∅ : ∀ {R} {T : GType R} {r : Role} → (r ∉ R) → πT r T ≡ ∅
+project∅ {T = T} {r} r∉RR′ = cong (λ rr → π-GType r rr T) (snd (∉→∈? r∉RR′))
+
+------------------------------------------------------------------------
+-- projection of tcom gets a lot of special attention
 
 
 lem7 : ∀ {r s S} {T : GType S} (p : S ≈ [ s ]) → π-GType r (r ∈? S) T ≅ π-GType r (r ∈? map (λ _ → s) S) (renameAll s T)
-lem7 {r} p = icong₂ (λ R → Dec (r ∈ R)) (≈cmap p) (π-GType r) (lem6 p) (lem5 p)
+lem7 {r} p = icong₂ (λ R → Dec (r ∈ R)) (≈cmap p) (π-GType r) (lem6 p) (renameAllSingle p)
 
 
-projectSend : ∀ {s s′ : Role} {S′ : Roles} {T : GType S′} {sim : S′ ≈ [ s′ ]} → s ≢ s′ → πT s′ (T ⇒⟨ [] ⟩ renameAll s T) ≡ (πT s′ T ⟶ ∅)
+rename∅ : ∀ {s s′ S′} {T : GType S′} → {S′ ≈ [ s′ ]} → s ≢ s′ → πT s′ (renameAll s T) ≡ ∅
+rename∅ {s} {s′} {T = T} {S′≈[s′]} s≢s′ = cong (λ S → π-GType s′ S (renameAll s T)) (snd (∉→∈? (≈∉ (λ {here → refl ↯ s≢s′}) (≈map (λ _ → s) S′≈[s′]))))
+
+
+projectSend : ∀ {s s′ S′} {T : GType S′} {sim : S′ ≈ [ s′ ]} → s ≢ s′ → πT s′ (T ⇒⟨ [] ⟩ renameAll s T) ≡ (πT s′ T ⟶ ∅)
 projectSend {s} {s′} {T = T} {S′≈[s′]} s≢s′ = πT s′ (T ⇒⟨ [] ⟩ renameAll s T)
                             ≡⟨ project⇒ (left-∈ (left-∈ (≈∈ here S′≈[s′]))) ⟩
                               πT s′ T ⟶ πT s′ (renameAll s T)
-                            ≡⟨ cong (πT s′ T ⟶_) (terrible {T = T} {S′≈[s′]} s≢s′) ⟩
+                            ≡⟨ cong (πT s′ T ⟶_) (rename∅ {T = T} {S′≈[s′]} s≢s′) ⟩
                               πT s′ T ⟶ ∅
                             ∎ where open ≡-Reasoning
-                            
-projectRecv : ∀ {s s′ : Role} {S′ : Roles} {T : GType S′} {sim : S′ ≈ [ s′ ]} → s ≢ s′ → πT s (T ⇒⟨ [] ⟩ renameAll s T) ≡ (∅ ⟶ πT s (renameAll s T))
+
+
+projectRecv : ∀ {s s′ S′} {T : GType S′} {sim : S′ ≈ [ s′ ]} → s ≢ s′ → πT s (T ⇒⟨ [] ⟩ renameAll s T) ≡ (∅ ⟶ πT s (renameAll s T))
 projectRecv {s} {s′} {S′} {T = T} {S′≈[s′]} s≢s′ =
                               πT s (T ⇒⟨ [] ⟩ renameAll s T)
                             ≡⟨ project⇒ (right-∈ {as = (S′ ++ [])} (map-∈ {f = (λ x → s)} (≈∈ here S′≈[s′]))) ⟩
@@ -125,9 +77,21 @@ projectRecv {s} {s′} {S′} {T = T} {S′≈[s′]} s≢s′ =
                             ≡⟨ cong (_⟶ πT s (renameAll s T)) (project∅ (≈∉ (λ {here → refl ↯ s≢s′}) S′≈[s′])) ⟩
                               ∅ ⟶ πT s (renameAll s T)
                             ∎ where open ≡-Reasoning
-                            
-here≡ : ∀ {x} {X : Set x} {A B : X} {L : List X} → A ≡ B → A ∈ (B ∷ L)
-here≡ refl = here
+
+------------------------------------------------------------------------
+-- transport
+
+transp-⊢ᵥ : ∀ {T T′ : LType} {Γ} -> T′ ≡ T -> Γ ⊢ᵥ T -> Γ ⊢ᵥ T′
+transp-⊢ᵥ refl Ts = Ts
+
+transp-⊢ₘ : ∀ {T T′ : LType} {Γ} -> T ≡ T′ -> Γ ⊢ₘ T -> Γ ⊢ₘ T′
+transp-⊢ₘ refl Ts = Ts
+
+bottom : ∀ {r Γ R} {T : GType R} → ¬ r ∈ R → π⋆ r Γ ⊢ᵥ πT r T 
+bottom ¬p = transp-⊢ᵥ (project∅ ¬p) ntbotm
+
+------------------------------------------------------------------------
+-- here we go!
 
 mutual
   πC : ∀ {Γ R} {T : GType R} → (r : Role) → Γ ⊩ₘ T → π⋆ r Γ ⊢ₘ (πT r T)
@@ -178,7 +142,7 @@ mutual
   ... | _ | yes refl = transp-⊢ᵥ (projectRecv {sim = sim} s′≠s) (ntrecv s)
   π-Value r (yes p) (tcom s s′ {S} {sim = both S⊆[s] [s]⊆S} {T = T}) | no s′≠s | no r≠s | no r≠s′ = case (∈-++⁻ (S ++ []) p) of λ {
                              (inj₁ r∈S[]) → ∈-singleton (S⊆[s] (++[]-∈ r∈S[])) ↯ r≠s;
-                             (inj₂ r∈S′) → ∈-singleton (≈∈ r∈S′ (≈map (λ _ → s′) ( both [s]⊆S S⊆[s]))) ↯ r≠s′}
+                             (inj₂ r∈S′) → ∈-singleton (≈∈ r∈S′ (≈map (λ _ → s′) (both [s]⊆S S⊆[s]))) ↯ r≠s′}
 
   π-Value r (no ¬p) (tcom r₁ s) = bottom ¬p
   

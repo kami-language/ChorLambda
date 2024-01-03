@@ -267,6 +267,9 @@ map-∈ (there a∈L) = there (map-∈ a∈L)
 ≡-∈ : ∀ {ℓ} {A : Set ℓ} {a : A} {L M : List A} → a ∈ M → L ≡ M → a ∈ L
 ≡-∈ a∈M refl = a∈M
 
+here≡ : ∀ {x} {X : Set x} {A B : X} {L : List X} → A ≡ B → A ∈ (B ∷ L)
+here≡ refl = here
+
 ∈-singleton : ∀ {A : Set} {a s : A} → a ∈ s ∷ [] → a ≡ s
 ∈-singleton here = refl
 
@@ -373,3 +376,6 @@ lem3 refl refl = here
                 s ∷ map (λ _ → s) (y ∷ S)
               ∎
              where open ≡-Reasoning
+
+lem6 : ∀ {r s : Nat} {S : List Nat} (p : S ≈ [ s ]) → r ∈? S ≅ r ∈? map (λ _ → s) S
+lem6 {r} p = ≅cong (r ∈?_) (≡-to-≅ (≈cmap p))

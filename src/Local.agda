@@ -4,18 +4,7 @@ module Local where
 
 open import Prelude
 open import Base
-
-----------------------------------------------------
--- local types
-
-
-data LType : Set where
-  _⟶_ : LType  → LType  → LType
-  _⋆_ : LType  → LType  → LType
-  _＋_ : LType  → LType  → LType
-  ○ : LType
-  ∅ : LType
-  
+open import Types
 
 ----------------------------------------------------
 -- behaviours
